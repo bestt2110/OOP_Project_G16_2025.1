@@ -1,4 +1,4 @@
-package collector;
+package youtubecollector;
 public class CommentRecord {
     public String videoId;
     public String commentId;

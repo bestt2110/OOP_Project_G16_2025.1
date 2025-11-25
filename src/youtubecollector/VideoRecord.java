@@ -1,4 +1,4 @@
-package collector;
+package youtubecollector;
 public class VideoRecord {
     public String videoId;
     public String title;

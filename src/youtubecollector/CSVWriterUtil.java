@@ -1,4 +1,4 @@
-package collector;
+package youtubecollector;
 import com.opencsv.CSVWriter;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
