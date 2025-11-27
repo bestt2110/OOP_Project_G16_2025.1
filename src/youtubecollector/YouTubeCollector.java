@@ -63,11 +63,14 @@ public class YouTubeCollector {
                 for (CommentThread ct : response.getItems()) {
                     if (collected >= maxComments) return comments;
                     CommentSnippet snip = ct.getSnippet().getTopLevelComment().getSnippet();
+                    Long likeCountL = snip.getLikeCount();
+                    long likeCount = (likeCountL != null) ? likeCountL : 0L;
                     comments.add(new CommentRecord(
                             videoId,
                             ct.getId(),
                             snip.getTextOriginal(),
-                            snip.getPublishedAt().toStringRfc3339()
+                            snip.getPublishedAt().toStringRfc3339(),
+                            likeCount
                     ));
                     collected++;
                 }

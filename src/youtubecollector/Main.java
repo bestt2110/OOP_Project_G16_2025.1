@@ -18,14 +18,14 @@ public class Main {
 
         // Collect comments
         List<String[]> commentRows = new ArrayList<>();
-        commentRows.add(new String[]{"videoId", "commentId", "text", "publishedAt"});
+        commentRows.add(new String[]{"videoId", "commentId", "text", "publishedAt", "likeCount"});
 
         for (VideoRecord v : videos) {
             System.out.println("Collecting comments for: " + v.videoId);
             List<CommentRecord> comments = collector.getComments(v.videoId, 300);
 
             for (CommentRecord c : comments) {
-                commentRows.add(new String[]{c.videoId, c.commentId, c.text, c.publishedAt});
+                commentRows.add(new String[]{c.videoId, c.commentId, c.text, c.publishedAt,String.valueOf(c.likeCount)});
             }
         }
 
