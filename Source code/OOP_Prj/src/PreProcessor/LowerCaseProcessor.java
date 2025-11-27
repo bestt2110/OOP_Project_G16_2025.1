@@ -9,4 +9,4 @@ public class LowerCaseProcessor implements PreProcessor {
         }
         return content.toLowerCase();
     }
-}
+} 
