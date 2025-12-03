@@ -16,9 +16,10 @@ public class Post {
 	private final List<Comment> comments;
 	
 	private String cleanContent;
-	private String sentimentPoint;
-	private String damageType;
-	
+	private String sentimentLabel; // Renamed for consistency with APIClient (was sentimentPoint)
+	private String damageTypeLabel; // Renamed for consistency with APIClient (was damageType)
+    private String reliefTypeLabel; // NEW FIELD: Required for Problem 3 (Relief Item Classification)
+
 	public Post(String id, String rawContent, LocalDateTime timestamp, int cmt) {
 		super();
 		this.id = id;
@@ -46,22 +47,32 @@ public class Post {
 		this.cleanContent = cleanContent;
 	}
 
-	public String getSentimentPoint() {
-		return sentimentPoint;
+
+	public String getSentimentLabel() { 
+		return sentimentLabel;
 	}
 
-	public void setSentimentPoint(String sentimentPoint) {
-		this.sentimentPoint = sentimentPoint;
+	public void setSentimentLabel(String sentimentLabel) { 
+		this.sentimentLabel = sentimentLabel;
 	}
 
-	public String getDamageType() {
-		return damageType;
+	public String getDamageTypeLabel() { 
+		return damageTypeLabel;
 	}
 
-	public void setDamageType(String damageType) {
-		this.damageType = damageType;
+	public void setDamageTypeLabel(String damageTypeLabel) { 
+		this.damageTypeLabel = damageTypeLabel;
 	}
+    
+    public String getReliefTypeLabel() {
+        return reliefTypeLabel;
+    }
 
+    public void setReliefTypeLabel(String reliefTypeLabel) {
+        this.reliefTypeLabel = reliefTypeLabel;
+    }
+
+	
 	public String getId() {
 		return id;
 	}
@@ -85,12 +96,12 @@ public class Post {
 	public int getCmt() {
 		return cmt;
 	}
-    
-    public List<Comment> getComments() {
-        return comments;
-    }
-    
-    public void addComment(Comment comment) {
-        this.comments.add(comment);
-    }
-}
+	
+	public List<Comment> getComments() {
+		return comments;
+	}
+	
+	public void addComment(Comment comment) {
+		this.comments.add(comment);
+	}
+}	
