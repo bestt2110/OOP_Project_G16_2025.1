@@ -33,6 +33,7 @@ public class TestPost {
             System.out.println("ID: " + post.getId());
             System.out.println("RAW:  " + post.getRawContent());
             System.out.println("CLEAN: " + post.getCleanContent());
+            System.out.println("Time: " + post.getTimestamp());
         }
         
         System.out.println("--- CHECK DONE ---");
