@@ -1,5 +1,3 @@
-// File: TestPreProcessor.java (trong gói Test)
-
 package Test;
 
 import Model.Post;
@@ -14,7 +12,7 @@ public class TestPost {
         
     	FileCollector collector = new FileCollector();
         
-        List<Post> posts = collector.collect("youtubevideos.csv");
+        List<Post> posts = collector.collect("C:\\Users\\admin\\Pictures\\OOP_Project_G16_2025.1\\Source code\\OOP_Prj\\youtubevideos.csv");
         
         PreProcessPipeline pipeline = new PreProcessPipeline();
         
@@ -32,7 +30,7 @@ public class TestPost {
             
             System.out.println("---------------------------------");
             System.out.println("ID: " + post.getId());
-            System.out.println("RAW:  " + post.getRawContent());
+            System.out.println("RAW:  " + post.getDamageTypeLabel());
             System.out.println("CLEAN: " + post.getCleanContent());
             System.out.println("Time: " + post.getTimestamp());
         }

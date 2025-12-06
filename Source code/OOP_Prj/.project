@@ -14,11 +14,4 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>Data</name>
-			<type>2</type>
-			<location>C:/Users/bestt/Downloads/OOP_Project_G16_2025.1-feature-data-scraping/OOP_Project_G16_2025.1-feature-data-scraping/src/youtubecollector</location>
-		</link>
-	</linkedResources>
 </projectDescription>

@@ -1,5 +1,3 @@
-// File: FileCollector.java (trong gói Data)
-
 package Data;
 
 import Model.Comment;
@@ -24,34 +22,51 @@ public class FileCollector implements DataCollector {
         
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             br.readLine(); // Bỏ qua tiêu đề
-            String line;
             
+            String line;
+            // Dùng StringBuilder để ghép các dòng bị ngắt quãng (Multi-line support)
+            StringBuilder currentRecord = new StringBuilder(); 
+            boolean inQuotes = false; 
+
             while ((line = br.readLine()) != null) {
-                // 1. DÙNG HÀM PARSE THÔNG MINH THAY VÌ SPLIT(",")
-                List<String> values = parseCsvLine(line);
                 
-                // 2. LÀM SẠCH DỮ LIỆU (Trim + Xóa ngoặc kép bao quanh)
+                // 1. Logic ghép dòng: Kiểm tra xem số lượng dấu ngoặc kép có chẵn/lẻ
+                for (char c : line.toCharArray()) {
+                    if (c == '\"') inQuotes = !inQuotes;
+                }
+                
+                currentRecord.append(line);
+
+                if (inQuotes) {
+                    // Nếu vẫn đang trong ngoặc kép, thêm dấu xuống dòng và đọc tiếp dòng sau
+                    currentRecord.append("\n");
+                    continue; // Bỏ qua các bước dưới, quay lại while để đọc tiếp
+                }
+
+                // 2. Khi đã có bản ghi trọn vẹn (inQuotes = false)
+                String fullRecord = currentRecord.toString();
+                List<String> values = parseCsvLine(fullRecord);
+                
+                // Reset bộ đệm cho vòng lặp sau
+                currentRecord.setLength(0); 
+
+                // 3. LÀM SẠCH DỮ LIỆU
                 for (int i = 0; i < values.size(); i++) {
                     String val = values.get(i).trim();
-                    // Nếu chuỗi bắt đầu và kết thúc bằng ngoặc kép thì xóa chúng đi
                     if (val.startsWith("\"") && val.endsWith("\"")) {
                         val = val.substring(1, val.length() - 1);
                     }
-                    // Xóa tiếp các ngoặc kép còn sót lại bên trong (nếu có, tuỳ nhu cầu)
                     val = val.replace("\"\"", "\""); 
                     values.set(i, val);
                 }
 
-                // --- BẮT ĐẦU XỬ LÝ ---
+                // --- BẮT ĐẦU XỬ LÝ POST ---
                 try {
-                    // Kiểm tra độ dài tối thiểu (4 cột bắt buộc)
-                    if (values.size() < 4) {
-                        continue; // Bỏ qua dòng lỗi
-                    }
+                    if (values.size() < 4) continue; 
 
-                    // --- CỘT BẮT BUỘC (0, 1, 2, 3) ---
+                    // CỘT BẮT BUỘC (0:ID, 1:Content, 2:Time, 3:CmtCount)
                     String id = values.get(0);
-                    String rawContent = values.get(1); // Bây giờ nội dung có dấu phẩy vẫn OK
+                    String rawContent = values.get(1);
                     
                     LocalDateTime timestamp = LocalDateTime.ofInstant(
                         Instant.parse(values.get(2)), ZoneOffset.UTC
@@ -59,27 +74,24 @@ public class FileCollector implements DataCollector {
                     
                     int cmt = Integer.parseInt(values.get(3));
 
-                    // --- TẠO ĐỐI TƯỢNG POST ---
-                    // (Tạo 1 lần duy nhất ở đây để tránh logic rườm rà)
                     Post post = new Post(id, rawContent, timestamp, cmt);
                     
-                    // --- CỘT TÙY CHỌN (SOURCE - INDEX 4) ---
+                    // CỘT TÙY CHỌN (4: Source)
                     if (values.size() >= 5) {
                         try {
                             String sourceString = values.get(4);
                             if (!sourceString.isEmpty()) {
                                 PostSource source = PostSource.valueOf(sourceString.toUpperCase());
-                                post.setSource(source); // Gán Source nếu có
+                                post.setSource(source);
                             }
                         } catch (IllegalArgumentException e) {
-                            System.err.println("Source không hợp lệ: " + values.get(4));
+                            // System.err.println("Source lỗi: " + values.get(4));
                         }
                     }
-
                     posts.add(post);
 
                 } catch (Exception e) {
-                    System.err.println("Lỗi xử lý dòng: " + line + " -> " + e.getMessage());
+                    System.err.println("Lỗi dòng Post: " + e.getMessage());
                 }
             }
         } catch (IOException e) {
@@ -89,10 +101,12 @@ public class FileCollector implements DataCollector {
         return posts;
     }
 
-public void loadComments(String filePath, List<Post> posts) {
+    // -------------------------------------------------------------
+    // LOAD COMMENTS (ĐÃ SỬA LỖI ĐA DÒNG VÀ INDEX)
+    // -------------------------------------------------------------
+    public void loadComments(String filePath, List<Post> posts) {
         
-        // 1. TỐI ƯU HÓA TÌM KIẾM: Chuyển List<Post> thành Map<PostID, Post>
-        // Để khi đọc 1 comment, ta tìm Post cha của nó trong O(1) thay vì phải loop
+        // Map để tìm Post cha nhanh chóng
         Map<String, Post> postMap = new HashMap<>();
         for (Post p : posts) {
             postMap.put(p.getId(), p);
@@ -100,13 +114,30 @@ public void loadComments(String filePath, List<Post> posts) {
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             br.readLine(); // Bỏ qua header
+            
             String line;
+            StringBuilder currentRecord = new StringBuilder();
+            boolean inQuotes = false;
 
             while ((line = br.readLine()) != null) {
-                // Dùng lại hàm parseCsvLine thông minh
-                List<String> values = parseCsvLine(line);
                 
-                // Clean data
+                // Logic ghép dòng tương tự như trên
+                for (char c : line.toCharArray()) {
+                    if (c == '\"') inQuotes = !inQuotes;
+                }
+                
+                currentRecord.append(line);
+
+                if (inQuotes) {
+                    currentRecord.append("\n");
+                    continue; 
+                }
+
+                String fullRecord = currentRecord.toString();
+                List<String> values = parseCsvLine(fullRecord);
+                currentRecord.setLength(0); // Reset
+
+                // Làm sạch
                 for (int i = 0; i < values.size(); i++) {
                     String val = values.get(i).trim();
                     if (val.startsWith("\"") && val.endsWith("\"")) {
@@ -115,40 +146,38 @@ public void loadComments(String filePath, List<Post> posts) {
                     values.set(i, val.replace("\"\"", "\""));
                 }
 
-                if (values.size() < 4) continue; // Yêu cầu tối thiểu 4 cột
+                if (values.size() < 4) continue;
 
                 try {
-                    // Cấu trúc: 0:CommentID, 1:PostID, 2:Content, 3:Timestamp
-                    String commentId = values.get(1);
-                    String postId = values.get(0); // Khóa ngoại
+                    // Cấu trúc chuẩn: 0:CommentID, 1:PostID, 2:Content, 3:Timestamp
+                    String commentId = values.get(1); 
+                    String postId = values.get(0);   
                     String content = values.get(2);
+                    
                     LocalDateTime timestamp = LocalDateTime.ofInstant(
                         Instant.parse(values.get(3)), ZoneOffset.UTC
                     );
 
-                    // Tạo đối tượng Comment
+                    // Tạo Comment (Constructor: ID, Content, Time)
                     Comment comment = new Comment(postId, commentId, content, timestamp);
 
-                    // 2. TÌM POST CHA VÀ GẮN COMMENT VÀO
+                    // Gắn vào Post cha
                     Post parentPost = postMap.get(postId);
                     if (parentPost != null) {
-                        parentPost.addComment(comment); // Hàm này phải có trong class Post
-                    } else {
-                        System.err.println("Cảnh báo: Không tìm thấy Post có ID " + postId + " cho Comment " + commentId);
-                    }
+                        parentPost.addComment(comment);
+                    } 
 
                 } catch (Exception e) {
-                    System.err.println("Lỗi dòng comment: " + line);
+                    System.err.println("Lỗi dòng Comment: " + e.getMessage());
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     /**
-     * HÀM HỖ TRỢ QUAN TRỌNG:
-     * Tách dòng CSV nhưng bỏ qua dấu phẩy nằm trong ngoặc kép.
-     * Ví dụ: '1,"Hello, World",ABC' -> ["1", "Hello, World", "ABC"]
+     * Hàm tách CSV chuẩn (Giữ nguyên)
      */
     private List<String> parseCsvLine(String line) {
         List<String> result = new ArrayList<>();
@@ -157,17 +186,15 @@ public void loadComments(String filePath, List<Post> posts) {
 
         for (char c : line.toCharArray()) {
             if (c == '\"') {
-                inQuotes = !inQuotes; // Đảo trạng thái: Đang trong ngoặc kép hoặc không
-                currentField.append(c); // Vẫn giữ ngoặc kép để xử lý sau
+                inQuotes = !inQuotes;
+                currentField.append(c);
             } else if (c == ',' && !inQuotes) {
-                // Nếu gặp dấu phẩy VÀ KHÔNG nằm trong ngoặc kép -> Kết thúc 1 trường
                 result.add(currentField.toString());
-                currentField.setLength(0); // Reset bộ đệm
+                currentField.setLength(0);
             } else {
-                currentField.append(c); // Thêm ký tự bình thường
+                currentField.append(c);
             }
         }
-        // Thêm trường cuối cùng
         result.add(currentField.toString());
         return result;
     }

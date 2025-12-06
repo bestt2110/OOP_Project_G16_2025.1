@@ -10,7 +10,6 @@ import javafx.scene.chart.*;
 import javafx.stage.Stage;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
 
 public class TestEx1 extends Application {
 
@@ -89,7 +88,8 @@ public class TestEx1 extends Application {
     // ============================
     // 4. START JAVAFX (LINE CHART)
     // ============================
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public void start(Stage stage) {
 
         stage.setTitle("Daily Sentiment Chart");
@@ -135,16 +135,12 @@ public class TestEx1 extends Application {
             FileCollector collector = new FileCollector();
 
             System.out.println("Đang đọc Posts...");
-            List<Post> posts = collector.collect(
-                    "youtubevideos.csv"
-            );
+            List<Post> posts = collector.collect("youtubevideos.csv");
             System.out.println("Đã đọc " + posts.size() + " bài viết.");
 
             System.out.println("Đang đọc Comments...");
-            collector.loadComments(
-                    "data.csv",
-                    posts
-            );
+            collector.loadComments("data.csv", posts);
+
 
             // Preprocess pipeline
             PreProcessPipeline pipeline = new PreProcessPipeline();
