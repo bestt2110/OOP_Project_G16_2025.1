@@ -49,6 +49,7 @@ public class SentimentResult extends AnalysisResult {
 
     public void setDateLabel(String dateLabel) {
         this.dateLabel = dateLabel;
+        super.setLabel(dateLabel);
     }
 
     public int getPositiveCount() {
@@ -57,7 +58,6 @@ public class SentimentResult extends AnalysisResult {
 
     public void setPositiveCount(int positiveCount) {
         this.positiveCount = positiveCount;
-        // Optionally update the inherited 'value' (total count)
         super.setValue(positiveCount + this.negativeCount);
     }
 
@@ -67,7 +67,6 @@ public class SentimentResult extends AnalysisResult {
 
     public void setNegativeCount(int negativeCount) {
         this.negativeCount = negativeCount;
-        // Optionally update the inherited 'value' (total count)
         super.setValue(this.positiveCount + negativeCount);
     }
     

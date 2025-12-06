@@ -1,9 +1,8 @@
 package Analysis;
 
-import Model.Post;
+import Model.Post;	
 import Model.AnalysisResult;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Interface AnalysisTask defines the common contract for all statistical analysis problems.
@@ -17,7 +16,7 @@ public interface AnalysisTask {
      * @return Map<String, AnalysisResult> The analysis results. The key represents the 
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
-    Map<String, AnalysisResult> execute(List<Post> data);
+    AnalysisResult execute(List<Post> data);
 
     /**
      * Returns the display name of the analysis problem (used for UI or reporting).

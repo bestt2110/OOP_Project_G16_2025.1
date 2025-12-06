@@ -30,8 +30,8 @@ public class TestPost {
             pipeline.execute(post);
             
             System.out.println("---------------------------------");
-            System.out.println("ID: " + post.getId());
-            System.out.println("RAW:  " + post.getDamageTypeLabel());
+            System.out.println("ID: " + post.getPostId());
+            System.out.println("RAW:  " + post.getRawContent());
             System.out.println("CLEAN: " + post.getCleanContent());
         }
         

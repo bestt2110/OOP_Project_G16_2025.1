@@ -15,24 +15,22 @@ import java.util.ArrayList;
 public class AnalysisEngine {
 
     // List containing the registered Analysis Tasks (Problem 1, 2, 3,...)
-    private List<AnalysisTask> tasks;
+    private final List<AnalysisTask> tasks;
 
     /**
      * Constructor: Initializes the list of Analysis Tasks.
-     * NOTE: Specific tasks (SentimentOverTimeAnalysis, etc.) will be added here
-     * once their corresponding feature branches are merged.
+     */
+    public AnalysisEngine(List<AnalysisTask> initialTasks) {
+        this.tasks = (initialTasks != null) ? new ArrayList<>(initialTasks) : new ArrayList<>();
+    }
+    
+    /**
+     * Default Constructor: Initializes an empty list of Analysis Tasks.
+     * Tasks must be added dynamically using addTask().
      */
     public AnalysisEngine() {
-        this.tasks = new ArrayList<>();
-        
-        // --- Dependency Injection/Initialization Point ---
-        // Once the feature/analysis-probX branches are merged, 
-        // you will uncomment or add the specific tasks here:
-        // tasks.add(new SentimentOverTimeAnalysis());
-        // tasks.add(new DamageCategoryAnalysis());
-        // tasks.add(new SatisfactionAnalysis());
+        this(null);
     }
-
     /**
      * Executes all registered analysis tasks sequentially.
      * @param data The pre-processed and labeled list of posts.
@@ -50,14 +48,22 @@ public class AnalysisEngine {
         
         // Main loop utilizing Polymorphism
         for (AnalysisTask task : tasks) {
+            String problemName = task.getProblemName();
             System.out.println("-> Executing Task: " + task.getProblemName());
             
-            // Calls the generic execute() method; the specific logic is within each Task implementation
-            Map<String, AnalysisResult> taskResults = task.execute(data);
-            
-            // Combines the results of each Task into the consolidated Map
-            combinedResults.putAll(taskResults);
-            System.out.println("-> Task completed with " + taskResults.size() + " results.");
+            try {
+                // Calls the execute() method; the specific logic is within each Task implementation
+                AnalysisResult result = task.execute(data);
+                
+                // Combines the result into the consolidated Map, using the problem name as the key
+                combinedResults.put(problemName, result);
+                
+                System.out.println("-> Task completed: " + problemName);
+            } catch (Exception e) {
+                // IMPORTANT: Handle exceptions from individual analysis tasks gracefully
+                System.err.println("!! ERROR during execution of " + problemName + ": " + e.getMessage());
+                // Continue to the next task if one fails
+            }
         }
         
         System.out.println("Analysis Engine: All tasks completed successfully.");
@@ -69,7 +75,9 @@ public class AnalysisEngine {
      * @param task The AnalysisTask to add.
      */
     public void addTask(AnalysisTask task) {
-        this.tasks.add(task);
+    	if (task != null) {
+            this.tasks.add(task);
+    	}
     }
     
     /**

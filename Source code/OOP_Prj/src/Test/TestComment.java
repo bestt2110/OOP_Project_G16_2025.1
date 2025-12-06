@@ -25,7 +25,7 @@ public class TestComment {
         
         for (Post p : posts) {
             if (!p.getComments().isEmpty()) {
-                System.out.println("Post " + p.getId() + " có " + p.getComments().size() + " bình luận:");
+                System.out.println("Post " + p.getPostId() + " có " + p.getComments().size() + " bình luận:");
                 List<Comment> commentlist = p.getComments();
                 for (Comment c: commentlist) {
                 	pipeline.execute(c);

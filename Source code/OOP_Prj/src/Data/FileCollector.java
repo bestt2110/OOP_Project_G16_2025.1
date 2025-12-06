@@ -95,7 +95,7 @@ public void loadComments(String filePath, List<Post> posts) {
         // Để khi đọc 1 comment, ta tìm Post cha của nó trong O(1) thay vì phải loop
         Map<String, Post> postMap = new HashMap<>();
         for (Post p : posts) {
-            postMap.put(p.getId(), p);
+            postMap.put(p.getPostId(), p);
         }
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
