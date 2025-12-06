@@ -53,7 +53,7 @@ public class DamageCategoryAnalysis implements AnalysisTask {
             post.setDamageCategory(category);
             
             // 3. Aggregate only if a valid category was found
-            if (category != null && !category.equals("Other/Unclassified")) {
+            if (category != null && !category.equals("NONE")) {
                 finalCounts.put(category, finalCounts.getOrDefault(category, 0L) + 1);
             }
         }
@@ -65,12 +65,12 @@ public class DamageCategoryAnalysis implements AnalysisTask {
     /**
      * Attempts to classify a post into one of the predefined damage categories using keyword matching.
      * @param post The post to classify.
-     * @return The determined category name or "Other/Unclassified".
+     * @return The determined category name or "NONE".
      */
     private String classifyPost(Post post) {
         String content = post.getCleanContent();
         if (content == null || content.isEmpty()) {
-            return "Other/Unclassified";
+            return "NONE";
         }
         
         String lowerCaseContent = content.toLowerCase();
@@ -89,7 +89,7 @@ public class DamageCategoryAnalysis implements AnalysisTask {
             }
         }
 
-        return "Other/Unclassified";
+        return "NONE";
     }
     
     /**
