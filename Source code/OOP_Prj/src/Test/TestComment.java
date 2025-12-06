@@ -22,6 +22,8 @@ public class TestComment {
         PreProcessPipeline pipeline = new PreProcessPipeline();
         pipeline.addProcessor(new LowerCaseProcessor());   
         pipeline.addProcessor(new SpecialSymbolRemover());   
+        pipeline.addProcessor(new VietnameseNormalizer());
+        pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
         
         for (Post p : posts) {
             if (!p.getComments().isEmpty()) {

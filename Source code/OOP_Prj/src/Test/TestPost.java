@@ -4,8 +4,6 @@ package Test;
 
 import Model.Post;
 import PreProcessor.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import Data.FileCollector;
@@ -20,7 +18,10 @@ public class TestPost {
         
         PreProcessPipeline pipeline = new PreProcessPipeline();
         
-        pipeline.addProcessor(new LowerCaseProcessor());    
+        pipeline.addProcessor(new LowerCaseProcessor());   
+        pipeline.addProcessor(new SpecialSymbolRemover());   
+        pipeline.addProcessor(new VietnameseNormalizer());
+        pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
        
 
         System.out.println("--- BẮT ĐẦU KIỂM THỬ PREPROCESSOR ---");
