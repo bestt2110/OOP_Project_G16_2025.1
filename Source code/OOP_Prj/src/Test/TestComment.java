@@ -13,11 +13,11 @@ public class TestComment {
         FileCollector collector = new FileCollector();
         
         System.out.println("Đang đọc Posts...");
-        List<Post> posts = collector.collect("C:\\Users\\admin\\Pictures\\OOP_Project_G16_2025.1\\Source code\\OOP_Prj\\youtubevideos.csv"); 
+        List<Post> posts = collector.collect("youtubevideos.csv"); 
         System.out.println("Đã đọc " + posts.size() + " bài viết.");
 
         System.out.println("Đang đọc Comments...");
-        collector.loadComments("C:\\Users\\admin\\Pictures\\OOP_Project_G16_2025.1\\Source code\\OOP_Prj\\data.csv", posts); 
+        collector.loadComments("data.csv", posts); 
         
         PreProcessPipeline pipeline = new PreProcessPipeline();
         pipeline.addProcessor(new LowerCaseProcessor());   

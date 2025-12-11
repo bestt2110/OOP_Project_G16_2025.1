@@ -3,13 +3,6 @@
     "configurations": [
         {
             "type": "java",
-            "name": "TestPost",
-            "request": "launch",
-            "mainClass": "OOP_Prj/Test.TestPost",
-            "projectName": "OOP_Prj"
-        },
-        {
-            "type": "java",
             "name": "TestEx1",
             "request": "launch",
             "mainClass": "OOP_Prj/TestBaBai.TestEx1",
@@ -17,16 +10,10 @@
         },
         {
             "type": "java",
-            "name": "TestEx1",
+            "name": "TestPost",
             "request": "launch",
-            "mainClass": "TestBaBai.TestEx1",
+            "mainClass": "OOP_Prj.Test.TestPost",
             "projectName": "OOP_Prj"
-        },
-        {
-            "type": "java",
-            "name": "Current File",
-            "request": "launch",
-            "mainClass": "${file}"
         },
         {
             "type": "java",
@@ -37,17 +24,9 @@
         },
         {
             "type": "java",
-            "name": "TestPost",
-            "request": "launch",
-            "mainClass": "Test.TestPost",
-            "projectName": "OOP_Prj"
-        },
-        {
-            "type": "java",
             "name": "TestEx1 (JavaFX)",
             "request": "launch",
-            "mainClass": "TestBaBai.TestEx1",
-            "projectName": "OOP_Prj",
+            "mainClass": "Source code.OOP_Prj.TestBaBai.TestEx1",
             "vmArgs": "--module-path \"C:\\javafx-sdk-21\\lib\" --add-modules javafx.controls,javafx.fxml"
         }
     ]
