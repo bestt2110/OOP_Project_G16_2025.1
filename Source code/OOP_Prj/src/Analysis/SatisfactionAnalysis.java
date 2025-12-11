@@ -1,14 +1,7 @@
 package Analysis;
 
-import Model.Post;
-import Model.AnalysisResult;
-import Model.SatisfactionResult;
-import Model.SentimentLabel;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import Model.*;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -16,102 +9,79 @@ import java.util.stream.Collectors;
  * Logic: Classifies posts into relief item categories (e.g., Food, Shelter) and then
  * aggregates the POSITIVE and NEGATIVE sentiment counts for each category.
  */
-public class SatisfactionAnalysis implements AnalysisTask {
+public class SatisfactionAnalysis {
 
-    private static final String PROBLEM_NAME = "Problem 3: Relief Item Satisfaction Analysis";
-    
-    // Map to store keywords for classification: Category Name -> Set of Keywords
-    private final Map<String, Set<String>> itemKeywords;
+    // ================================
+    // 1. Loại cứu trợ
+    // ================================
+    private final Map<String, List<String>> itemKeywords;
+
+    // ================================
+    // 2. Từ phân loại sentiment
+    // ================================
+    private static final List<String> POSITIVE_WORDS = Arrays.asList("an", "ổn", "toàn");
+    private static final List<String> NEGATIVE_WORDS = Arrays.asList("tử", "mất", "hỏng");
 
     public SatisfactionAnalysis() {
-        // Initialize the keyword map (Should load from a resource file for OCP compliance)
-        this.itemKeywords = loadItemKeywords();
+        itemKeywords = loadItemKeywords();
     }
 
-    @Override
-    public String getProblemName() {
-        return PROBLEM_NAME;
-    }
+    // ================================
+    // 3. Hàm chính: gom Map<Type, (pos,neg)>
+    // ================================
+    public Map<String, ReliefSentimentCount> execute(List<Comment> data) {
+        Map<String, ReliefSentimentCount> result = new HashMap<>();
+        if (data == null || data.isEmpty()) return result;
 
-    /**
-     * Executes the analysis: classifies posts by relief item and aggregates sentiment counts.
-     * @param data The list of Post objects (must have clean content and sentiment labels).
-     * @return SatisfactionResult containing detailed sentiment counts per category.
-     */
-    @Override
-    public AnalysisResult execute(List<Post> data) {
-        if (data == null || data.isEmpty()) {
-            return new SatisfactionResult(Map.of());
+        for (Comment post : data) {
+            String content = post.getRawContent();
+            if (content == null || content.isEmpty()) continue;
+
+            // 3a. Xác định loại cứu trợ
+            String category = classifyCategory(content);
+            if (category == null) continue;
+
+            // 3b. Xác định sentiment dựa trên từ positive/negative
+            String lower = content.toLowerCase();
+            int posCount = 0, negCount = 0;
+            for (String w : POSITIVE_WORDS) if (lower.contains(w)) posCount++;
+            for (String w : NEGATIVE_WORDS) if (lower.contains(w)) negCount++;
+
+            if (posCount == 0 && negCount == 0) continue; // không tính NEUTRAL
+
+            // 3c. Cập nhật map
+            ReliefSentimentCount count = result.getOrDefault(category, new ReliefSentimentCount(0, 0));
+            if (posCount > negCount) count.incrementPositive();
+            else if (negCount > posCount) count.incrementNegative();
+            result.put(category, count);
         }
 
-        // Map to store final results: Category -> Map<Sentiment, Count>
-        Map<String, Map<SentimentLabel, Long>> detailedCounts = new HashMap<>();
+        return result;
+    }
 
-        // 1. Classification and Aggregation
-        for (Post post : data) {
-            String category = classifyPost(post);
-            
-            // Only aggregate if a valid category is found and sentiment is not neutral/unknown
-            if (category != null && !category.equals("NONE") && 
-                (post.getSentimentLabel() == SentimentLabel.POSITIVE || post.getSentimentLabel() == SentimentLabel.NEGATIVE)) {
-                
-                // Get or initialize the map for this category
-                detailedCounts.putIfAbsent(category, new HashMap<>());
-                Map<SentimentLabel, Long> sentimentCounts = detailedCounts.get(category);
-                
-                SentimentLabel label = post.getSentimentLabel();
-                
-                // Increment the count for the specific sentiment label
-                sentimentCounts.put(label, sentimentCounts.getOrDefault(label, 0L) + 1);
-                
-                // Set the category back to the Post object (optional but useful for traceability)
-                post.setReliefItemCategory(category);
+    // ================================
+    // 4. Xác định loại cứu trợ từ từ khóa
+    // ================================
+    private String classifyCategory(String content) {
+        String lower = content.toLowerCase();
+        for (Map.Entry<String, List<String>> entry : itemKeywords.entrySet()) {
+            for (String keyword : entry.getValue()) {
+                if (lower.contains(keyword)) return entry.getKey();
             }
         }
-
-        // 2. Wrap the results into the SatisfactionResult model
-        return new SatisfactionResult(detailedCounts);
+        return null;
     }
 
-    /**
-     * Attempts to classify a post into one of the predefined relief item categories using keyword matching.
-     * This is a crucial step for Problem 3.
-     */
-    private String classifyPost(Post post) {
-        String content = post.getCleanContent();
-        if (content == null || content.isEmpty()) {
-            return "NONE";
-        }
-        
-        String lowerCaseContent = content.toLowerCase();
-
-        // Iterate through all relief categories and their keywords
-        for (Map.Entry<String, Set<String>> entry : itemKeywords.entrySet()) {
-            String category = entry.getKey();
-            Set<String> keywords = entry.getValue();
-
-            for (String keyword : keywords) {
-                if (lowerCaseContent.contains(keyword)) {
-                    return category; 
-                }
-            }
-        }
-        return "NONE";
-    }
-
-    /**
-     * Initializes the predefined relief item categories and their associated Vietnamese keywords.
-     * Based on problem description: shelter, transportation, food, medical support, and cash assistance.
-     */
-    private Map<String, Set<String>> loadItemKeywords() {
-        Map<String, Set<String>> keywords = new HashMap<>();
-        
-        keywords.put("Shelter", Set.of("chỗ ở", "nhà ở", "lều", "bạt", "che mưa", "tạm trú"));
-        keywords.put("Transportation", Set.of("xe", "chuyển hàng", "đường đi", "cầu", "vận chuyển", "đi lại"));
-        keywords.put("Food", Set.of("thức ăn", "gạo", "mì", "nước uống", "đồ hộp", "cơm", "lương thực"));
-        keywords.put("Medical Support", Set.of("thuốc", "bác sĩ", "y tế", "sơ cứu", "bệnh viện", "sức khỏe"));
-        keywords.put("Cash Assistance", Set.of("tiền", "tiền mặt", "quỹ", "hỗ trợ tài chính", "ủng hộ tiền"));
-        
-        return keywords;
+    // ================================
+    // 5. Tải danh sách từ khóa cho các loại cứu trợ
+    // ================================
+    private Map<String, List<String>> loadItemKeywords() {
+        Map<String, List<String>> map = new HashMap<>();
+        map.put("Shelter", Arrays.asList("chỗ ở", "nhà ở", "lều", "bạt", "che mưa", "tạm trú"));
+        map.put("Transportation", Arrays.asList("xe", "chuyển hàng", "đường đi", "cầu", "vận chuyển", "đi lại"));
+        map.put("Food", Arrays.asList("thức ăn", "gạo", "mì", "nước uống", "đồ hộp", "cơm", "lương thực"));
+        map.put("Medical Support", Arrays.asList("thuốc", "bác sĩ", "y tế", "sơ cứu", "bệnh viện", "sức khỏe"));
+        map.put("Cash Assistance", Arrays.asList("tiền", "tiền mặt", "quỹ", "hỗ trợ tài chính", "ủng hộ tiền"));
+        return map;
     }
 }

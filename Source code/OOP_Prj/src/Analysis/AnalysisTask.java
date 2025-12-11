@@ -1,7 +1,6 @@
 package Analysis;
 
-import Model.Post;	
-import Model.AnalysisResult;
+import Model.*;
 import java.util.List;
 
 /**
@@ -16,7 +15,7 @@ public interface AnalysisTask {
      * @return Map<String, AnalysisResult> The analysis results. The key represents the 
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
-    AnalysisResult execute(List<Post> data);
+    AnalysisResult execute(List<Comment> data);
 
     /**
      * Returns the display name of the analysis problem (used for UI or reporting).

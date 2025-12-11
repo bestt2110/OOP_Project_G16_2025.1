@@ -166,6 +166,14 @@ import javafx.scene.layout.VBox;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.stage.Stage;
+import javafx.scene.control.*;
+import Analysis.*;
+import Model.*;
+import PreProcessor.*;
+import Data.*;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class UI extends Application {
 
@@ -220,20 +228,22 @@ public class UI extends Application {
     // --------------------------------------------------
     private void createMainScene() {
         Button btnLine = new Button("Line Chart");
-        Button btnBar = new Button("Bar Chart");
         Button btnPie = new Button("Pie Chart");
+        Button btnBar = new Button("Bar Chart");
         Button btnBack = new Button("< Back");
 
         btnLine.setPrefWidth(150);
-        btnBar.setPrefWidth(150);
         btnPie.setPrefWidth(150);
+        btnBar.setPrefWidth(150);
+        
 
         btnBack.setOnAction(e -> stageRef.setScene(homeScene));
         btnLine.setOnAction(e -> showChartScene(createLineChart()));
-        btnBar.setOnAction(e -> showChartScene(createBarChart()));
         btnPie.setOnAction(e -> showChartScene(createPieChart()));
+        btnBar.setOnAction(e -> showChartScene(createBarChart()));
+        
 
-        VBox menuBox = new VBox(20, btnLine, btnBar, btnPie, btnBack);
+        VBox menuBox = new VBox(20, btnLine, btnPie, btnBar, btnBack);
         menuBox.setAlignment(Pos.CENTER);
 
         StackPane root = new StackPane(menuBox);
@@ -245,6 +255,7 @@ public class UI extends Application {
     // --------------------------------------------------
     // 3. HIỂN THỊ SCENE BIỂU ĐỒ + NÚT BACK
     // --------------------------------------------------
+    
     private void showChartScene(javafx.scene.Node chart) {
         double width = stageRef.getWidth();
         double height = stageRef.getHeight();
@@ -268,65 +279,312 @@ public class UI extends Application {
         stageRef.setWidth(width);
         stageRef.setHeight(height);
     }
+    private void showError(String msg) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Lỗi");
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
+    }
 
+/*
     // --------------------------------------------------
     // 4. TẠO LINE CHART
     // --------------------------------------------------
-    private LineChart<Number, Number> createLineChart() {
-        NumberAxis xAxis = new NumberAxis();
+    private LineChart<String, Number> createLineChart() {
+    	// =====================================
+        // 1. TẢI & XỬ LÝ DỮ LIỆU
+        // =====================================
+        FileCollector collector = new FileCollector();
+        List<Post> posts = collector.collect("youtubevideos.csv");
+        collector.loadComments("data.csv", posts);
+
+        PreProcessPipeline pipeline = new PreProcessPipeline();
+        pipeline.addProcessor(new LowerCaseProcessor());
+        pipeline.addProcessor(new SpecialSymbolRemover());
+
+        List<Comment> allComments = new ArrayList<>();
+        for (Post p : posts) {
+            for (Comment c : p.getComments()) {
+                pipeline.execute(c);
+                allComments.add(c);
+            }
+        }
+
+        SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
+        Map<LocalDate, SentimentCount> result = engine.execute(allComments);
+
+
+    	Map<LocalDate, SentimentCount> sortedResult =
+    			result.entrySet()
+    			.stream()
+    			.sorted(Map.Entry.comparingByKey())
+    			.collect(Collectors.toMap(
+    					Map.Entry::getKey,
+    					Map.Entry::getValue,
+    					(a, b) -> a,
+    					java.util.LinkedHashMap::new
+    					));
+
+
+    	// =====================================
+    	// 2. TẠO LINE CHART
+    	// =====================================
+    	CategoryAxis xAxis = new CategoryAxis();
+    	NumberAxis yAxis = new NumberAxis();
+    	xAxis.setLabel("Ngày");
+    	yAxis.setLabel("Số lượng comment");
+
+
+    	LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+    	chart.setTitle("Sentiment Over Time");
+
+
+    	XYChart.Series<String, Number> positiveSeries = new XYChart.Series<>();
+    	positiveSeries.setName("Positive");
+
+
+    	XYChart.Series<String, Number> negativeSeries = new XYChart.Series<>();
+    	negativeSeries.setName("Negative");
+
+
+    	for (Map.Entry<LocalDate, SentimentCount> e : sortedResult.entrySet()) {
+    		String day = e.getKey().toString();
+    		positiveSeries.getData().add(new XYChart.Data<>(day, e.getValue().getPositive()));
+    		negativeSeries.getData().add(new XYChart.Data<>(day, e.getValue().getNegative()));
+    	}
+
+
+    		chart.getData().addAll(positiveSeries, negativeSeries);
+    		return chart;
+    }
+    */
+    private VBox createLineChart() {
+        // =====================================
+        // 1. TẢI & XỬ LÝ DỮ LIỆU
+        // =====================================
+        FileCollector collector = new FileCollector();
+        List<Post> posts = collector.collect("youtubevideos.csv");
+        collector.loadComments("data.csv", posts);
+
+        PreProcessPipeline pipeline = new PreProcessPipeline();
+        pipeline.addProcessor(new LowerCaseProcessor());
+        pipeline.addProcessor(new SpecialSymbolRemover());
+
+        List<Comment> allComments = new ArrayList<>();
+        for (Post p : posts) {
+            for (Comment c : p.getComments()) {
+                pipeline.execute(c);
+                allComments.add(c);
+            }
+        }
+
+        SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
+        Map<LocalDate, SentimentCount> result = engine.execute(allComments);
+
+        Map<LocalDate, SentimentCount> sortedResult =
+                result.entrySet()
+                        .stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue,
+                                (a, b) -> a,
+                                LinkedHashMap::new
+                        ));
+
+        // =====================================
+        // 2. TẠO DATE PICKER
+        // =====================================
+        LocalDate minDate = sortedResult.keySet().iterator().next();
+        LocalDate maxDate = sortedResult.keySet().stream().reduce((a,b)->b).orElse(minDate);
+
+        DatePicker startPicker = new DatePicker(minDate);
+        DatePicker endPicker = new DatePicker(maxDate);
+
+        // =====================================
+        // 3. TẠO CHART
+        // =====================================
+        CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Thời điểm (ms)");
-        yAxis.setLabel("Giá trị");
+        xAxis.setTickLabelsVisible(false);
+        xAxis.setTickMarkVisible(false);
+        xAxis.setOpacity(0);
+        yAxis.setLabel("Số lượng comment");
 
-        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle("Line Chart: Dữ liệu mẫu");
+        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setTitle("Sentiment Over Time");
+        chart.setCreateSymbols(false);
 
-        XYChart.Series<Number, Number> s = new XYChart.Series<>();
-        s.setName("Series A");
-        s.getData().add(new XYChart.Data<>(0, 23));
-        s.getData().add(new XYChart.Data<>(1, 14));
-        s.getData().add(new XYChart.Data<>(2, 15));
-        s.getData().add(new XYChart.Data<>(3, 24));
-        s.getData().add(new XYChart.Data<>(4, 34));
-        s.getData().add(new XYChart.Data<>(5, 36));
+        // =====================================
+        // 4. NÚT VẼ BIỂU ĐỒ
+        // =====================================
+        Button btnDraw = new Button("Vẽ biểu đồ");
+        btnDraw.setOnAction(e -> {
+            LocalDate start = startPicker.getValue();
+            LocalDate end = endPicker.getValue();
 
-        chart.getData().add(s);
-        return chart;
+            // Validate ngày
+            if (start == null || end == null) {
+                showError("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!");
+                return;
+            }
+            if (start.isAfter(end)) {
+                showError("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
+                return;
+            }
+
+            // Lọc theo khoảng ngày
+            Map<LocalDate, SentimentCount> filtered = sortedResult.entrySet()
+                    .stream()
+                    .filter(x -> !x.getKey().isBefore(start) && !x.getKey().isAfter(end))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (a, b) -> a,
+                            LinkedHashMap::new
+                    ));
+
+            if (filtered.isEmpty()) {
+                showError("Không có comment trong khoảng ngày đã chọn!");
+                return;
+            }
+
+            // Xóa dữ liệu cũ
+            chart.getData().clear();
+
+            // Series mới
+            XYChart.Series<String, Number> pos = new XYChart.Series<>();
+            pos.setName("Positive");
+            XYChart.Series<String, Number> neg = new XYChart.Series<>();
+            neg.setName("Negative");
+
+            int index = 1;
+            for (Map.Entry<LocalDate, SentimentCount> entry : filtered.entrySet()) {
+                SentimentCount sc = entry.getValue();
+                pos.getData().add(new XYChart.Data<>(String.valueOf(index), sc.getPositive()));
+                neg.getData().add(new XYChart.Data<>(String.valueOf(index), sc.getNegative()));
+                index++;
+            }
+
+            chart.getData().addAll(pos, neg);
+        });
+
+        // =====================================
+        // 5. GOM LAYOUT UI
+        // =====================================
+        VBox box = new VBox(10,
+                new Label("Chọn khoảng thời gian:"),
+                startPicker,
+                endPicker,
+                btnDraw,
+                chart
+        );
+        box.setPadding(new Insets(10));
+
+        return box;
     }
 
     // --------------------------------------------------
     // 5. TẠO BAR CHART
     // --------------------------------------------------
     private BarChart<String, Number> createBarChart() {
-        CategoryAxis x = new CategoryAxis();
-        NumberAxis y = new NumberAxis();
-        x.setLabel("Quý");
-        y.setLabel("Doanh thu (k)");
 
-        BarChart<String, Number> chart = new BarChart<>(x, y);
-        chart.setTitle("Bar Chart: Doanh thu theo quý");
+        // =====================================
+        // 1. THU THẬP & TIỀN XỬ LÝ DỮ LIỆU
+        // =====================================
+        FileCollector collector = new FileCollector();
+        List<Post> posts = collector.collect("youtubevideos.csv");
+        collector.loadComments("data.csv", posts);
 
-        XYChart.Series<String, Number> s = new XYChart.Series<>();
-        s.setName("2025");
-        s.getData().add(new XYChart.Data<>("Q1", 150));
-        s.getData().add(new XYChart.Data<>("Q2", 200));
-        s.getData().add(new XYChart.Data<>("Q3", 180));
-        s.getData().add(new XYChart.Data<>("Q4", 220));
+        PreProcessPipeline pipeline = new PreProcessPipeline();
+        pipeline.addProcessor(new LowerCaseProcessor());
+        pipeline.addProcessor(new SpecialSymbolRemover());
 
-        chart.getData().add(s);
+        // Gom tất cả comment
+        List<Comment> allComments = new ArrayList<>();
+        for (Post p : posts) {
+            for (Comment c : p.getComments()) {
+                pipeline.execute(c);  // xử lý content
+                allComments.add(c);
+            }
+        }
+
+        // =====================================
+        // 2. PHÂN LOẠI & ĐẾM POS/NEG
+        // =====================================
+        SatisfactionAnalysis engine = new SatisfactionAnalysis();
+        Map<String, ReliefSentimentCount> storedResult = engine.execute(allComments);
+
+        // =====================================
+        // 3. TẠO BAR CHART
+        // =====================================
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Loại cứu trợ");
+        yAxis.setLabel("Số lượng comment");
+
+        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        chart.setTitle("Số lượng comment Positive & Negative theo loại cứu trợ");
+
+        XYChart.Series<String, Number> positiveSeries = new XYChart.Series<>();
+        positiveSeries.setName("Positive");
+
+        XYChart.Series<String, Number> negativeSeries = new XYChart.Series<>();
+        negativeSeries.setName("Negative");
+
+        // Thêm dữ liệu từ storedResult
+        for (Map.Entry<String, ReliefSentimentCount> entry : storedResult.entrySet()) {
+            String category = entry.getKey();
+            ReliefSentimentCount count = entry.getValue();
+
+            positiveSeries.getData().add(new XYChart.Data<>(category, count.getPositive()));
+            negativeSeries.getData().add(new XYChart.Data<>(category, count.getNegative()));
+        }
+
+        chart.getData().addAll(positiveSeries, negativeSeries);
         return chart;
     }
 
     // --------------------------------------------------
     // 6. TẠO PIE CHART
     // --------------------------------------------------
-    private PieChart createPieChart() {
+    public PieChart createPieChart() {
+
+        // =====================================
+        // 1. TẢI & XỬ LÝ DỮ LIỆU
+        // =====================================
+        FileCollector collector = new FileCollector();
+        List<Post> posts = collector.collect("youtubevideos.csv");
+        collector.loadComments("data.csv", posts);
+
+        PreProcessPipeline pipeline = new PreProcessPipeline();
+        pipeline.addProcessor(new LowerCaseProcessor());
+        pipeline.addProcessor(new SpecialSymbolRemover());
+
+        // Gom tất cả comment
+        List<Comment> allComments = new ArrayList<>();
+        for (Post p : posts) {
+            for (Comment c : p.getComments()) {
+                pipeline.execute(c);
+                allComments.add(c);
+            }
+        }
+
+        // Phân loại và đếm comment theo category
+        DamageCategoryAnalysis engine = new DamageCategoryAnalysis();
+        Map<String, Long> result = engine.execute(allComments);
+
+        // =====================================
+        // 2. TẠO PIE CHART
+        // =====================================
         PieChart chart = new PieChart();
-        chart.setTitle("Pie Chart: Thị phần");
-        chart.getData().add(new PieChart.Data("Nhóm A", 30));
-        chart.getData().add(new PieChart.Data("Nhóm B", 25));
-        chart.getData().add(new PieChart.Data("Nhóm C", 20));
-        chart.getData().add(new PieChart.Data("Nhóm D", 25));
+        chart.setTitle("Phân loại comment theo category");
+
+        for (Map.Entry<String, Long> entry : result.entrySet()) {
+            chart.getData().add(new PieChart.Data(entry.getKey(), entry.getValue()));
+        }
+
         return chart;
     }
 
