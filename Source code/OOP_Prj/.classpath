@@ -2,5 +2,16 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/jsoup-1.21.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/gson-2.13.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-api-services-youtube-v3-rev183-1.22.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-oauth-client-1.23.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-http-client-gson-1.23.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-http-client-jackson2-1.23.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-api-client-1.23.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/google-http-client-1.23.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/jackson-core-2.20.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/guava-20.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ADMIN1/Downloads/opencsv-5.9.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

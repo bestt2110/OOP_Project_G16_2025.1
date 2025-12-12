@@ -1,22 +1,25 @@
 package Model;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 public class Comment {
 	
 	private String postID;
 	private String id;
 	private String rawContent;
-	private LocalDateTime timestamp;
+	private Date timestamp;
 	private String cleanContent;
+	private int likeCount;
 	
 	private String sentimentPoint;
-	public Comment(String postID, String id, String rawComment, LocalDateTime timestamp) {
+	public Comment(String postID, String id, String rawComment, Date timestamp, int likeCount) {
 		super();
 		this.postID = postID;
 		this.id = id;
 		this.rawContent = rawComment;
 		this.timestamp = timestamp;
+		this.likeCount = likeCount;
 	}
 	public String getCleanContent() {
 		return cleanContent;
@@ -39,8 +42,11 @@ public class Comment {
 	public String getRawContent() {
 		return rawContent;
 	}
-	public LocalDateTime getTimestamp() {
+	public Date getTimestamp() {
 		return timestamp;
+	}
+	public int getLikeCount() {
+		return likeCount;
 	}
 
 }

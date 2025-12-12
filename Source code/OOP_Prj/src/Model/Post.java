@@ -1,15 +1,20 @@
 package Model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class Post {
 	
 	private String id;
 	private String rawContent;
-	private LocalDateTime timestamp;
-	private int cmt;
+	private Date publishedAt;
+	private int likeCount;
+	private int cmtCount;
 	private PostSource source;
 	private final List<Comment> comments;
 	
@@ -18,23 +23,14 @@ public class Post {
 	private String damageTypeLabel; // Renamed for consistency with APIClient (was damageType)
     private String reliefTypeLabel; // NEW FIELD: Required for Problem 3 (Relief Item Classification)
 
-	public Post(String id, String rawContent, LocalDateTime timestamp, int cmt) {
+	public Post(String id, String rawContent, Date publishedAt, int likeCount, int cmtCount) {
 		super();
 		this.id = id;
 		this.rawContent = rawContent;
-		this.timestamp = timestamp;
-		this.cmt = cmt;
+		this.publishedAt = publishedAt;
+		this.likeCount = likeCount;
+		this.cmtCount = cmtCount;
 		this.comments = new ArrayList<>();
-	}
-
-	public Post(String id, String rawContent, LocalDateTime timestamp, int cmt, PostSource source) {
-		super();
-		this.id = id;
-		this.rawContent = rawContent;
-		this.timestamp = timestamp;
-		this.cmt = cmt;
-		this.comments = new ArrayList<>();
-		this.setSource(source);
 	}
 
 	public String getCleanContent() {
@@ -79,8 +75,8 @@ public class Post {
 		return rawContent;
 	}
 
-	public LocalDateTime getTimestamp() {
-		return timestamp;
+	public Date getTimestamp() {
+		return publishedAt;
 	}
 
 	public PostSource getSource() {
@@ -91,8 +87,12 @@ public class Post {
 		this.source = source;
 	}
 
+	public int getLike() {
+		return likeCount;
+	}
+	
 	public int getCmt() {
-		return cmt;
+		return cmtCount;
 	}
 	
 	public List<Comment> getComments() {
@@ -102,4 +102,6 @@ public class Post {
 	public void addComment(Comment comment) {
 		this.comments.add(comment);
 	}
+
+	
 }	
