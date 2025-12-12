@@ -6,8 +6,8 @@ import java.util.*;
 
 public class SentimentOverTimeAnalysis {
 
-    private static final List<String> POSITIVE_WORDS = Arrays.asList("an", "ổn", "toàn");
-    private static final List<String> NEGATIVE_WORDS = Arrays.asList("tử", "mất", "hỏng");
+    private static final List<String> POSITIVE_WORDS = Arrays.asList("an", "ổn", "toàn", "hết", "đẹp", "thường", "khỏe", "ơn", "ủng", "thiện");
+    private static final List<String> NEGATIVE_WORDS = Arrays.asList("tử", "mất", "hỏng", "phá", "thương", "suy", "nề", "lũ", "lụt", "nghiêm");
 
     /**
      * Phân loại sentiment của 1 câu bình luận

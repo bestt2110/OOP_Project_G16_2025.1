@@ -56,7 +56,7 @@ public class DamageCategoryAnalysis {
     // 3. Xác định category của một comment
     // ==========================
     private String classifyComment(String content) {
-        if (content == null || content.isEmpty()) return "Other/Unclassified";
+        if (content == null || content.isEmpty()) return null;
 
         String lower = content.toLowerCase();
 
