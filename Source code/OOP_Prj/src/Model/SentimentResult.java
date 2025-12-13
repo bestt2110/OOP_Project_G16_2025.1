@@ -24,7 +24,7 @@ public class SentimentResult extends AnalysisResult {
      */
     public SentimentResult(String dateLabel, int positiveCount, int negativeCount) {
         // Calling the parent constructor (AnalysisResult) with summarized data
-        super(dateLabel, positiveCount + negativeCount, "Posts");
+        //super(dateLabel, positiveCount + negativeCount, "Posts");
         
         this.dateLabel = dateLabel;
         this.positiveCount = positiveCount;
@@ -58,7 +58,7 @@ public class SentimentResult extends AnalysisResult {
     public void setPositiveCount(int positiveCount) {
         this.positiveCount = positiveCount;
         // Optionally update the inherited 'value' (total count)
-        super.setValue(positiveCount + this.negativeCount);
+        //super.setValue(positiveCount + this.negativeCount);
     }
 
     public int getNegativeCount() {
@@ -68,7 +68,7 @@ public class SentimentResult extends AnalysisResult {
     public void setNegativeCount(int negativeCount) {
         this.negativeCount = negativeCount;
         // Optionally update the inherited 'value' (total count)
-        super.setValue(this.positiveCount + negativeCount);
+        //super.setValue(this.positiveCount + negativeCount);
     }
     
     // Override toString() for better logging/debugging

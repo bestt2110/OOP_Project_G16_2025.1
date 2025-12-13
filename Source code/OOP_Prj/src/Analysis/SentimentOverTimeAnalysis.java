@@ -1,10 +1,10 @@
 package Analysis;
 
 import Model.*;
-import java.time.LocalDate;
+import java.time.*;
 import java.util.*;
 
-public class SentimentOverTimeAnalysis {
+public class SentimentOverTimeAnalysis implements AnalysisTask<SentimentResult> {
 
     private static final List<String> POSITIVE_WORDS = Arrays.asList("an", "ổn", "toàn");
     private static final List<String> NEGATIVE_WORDS = Arrays.asList("tử", "mất", "hỏng");
@@ -30,23 +30,28 @@ public class SentimentOverTimeAnalysis {
     /**
      * Hàm execute cải tiến: trả về Map<LocalDate, SentimentCount>
      */
-    public Map<LocalDate, SentimentResult> execute(List<Comment> comments) {
+    @Override
+    public Map<String, SentimentResult> execute(List<Comment> comments) {
 
-        Map<LocalDate, SentimentResult> result = new HashMap<>();
+        Map<String, SentimentResult> result = new HashMap<>();
 
         for (Comment c : comments) {
             if (c.getTimestamp() == null) continue;
 
             Date date = c.getTimestamp();
-            SentimentLabel label = classifySentiment(c.getRawContent());
+            SentimentLabel label = classifySentiment(c.getCleanContent());
 
             // Lấy hoặc tạo mới object count
             SentimentResult count = result.getOrDefault(date, new SentimentResult());
 
-            if (label == SentimentLabel.POSITIVE) count.positive++;
-            if (label == SentimentLabel.NEGATIVE) count.negative++;
+            if (label == SentimentLabel.POSITIVE) count.setPositiveCount(count.getPositiveCount() + 1); 
+            if (label == SentimentLabel.NEGATIVE) count.setNegativeCount(count.getNegativeCount() + 1);
+            LocalDate localDate = date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
 
-            result.put(date, count);
+            String stringDate = localDate.toString();
+            result.put(stringDate, count);
         }
 
         return result;

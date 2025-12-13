@@ -1,31 +1,30 @@
 package Test;
 
-import java.util.List;
-
-import Data.FileCollector;
-import Model.Comment;
-import Model.Post;
+import java.text.*;
+import Model.*;
 import PreProcessor.*;
-
+import Data.*;
+import java.util.*;
 
 public class TestComment {
-    public static void main(String[] args) {
-        FileCollector collector = new FileCollector();
+    public static void main(String[] args) throws ParseException {
+    	List<String> keys = Arrays.asList("bão Yagi");
+        FileCollector collector = new FileCollector("data.csv");
         
         System.out.println("Đang đọc Posts...");
-        List<Post> posts = collector.collect("youtubevideos.csv"); 
-        System.out.println("Đã đọc " + posts.size() + " bài viết.");
 
         System.out.println("Đang đọc Comments...");
-        collector.loadComments("data.csv", posts); 
-        
         PreProcessPipeline pipeline = new PreProcessPipeline();
         pipeline.addProcessor(new LowerCaseProcessor());   
         pipeline.addProcessor(new SpecialSymbolRemover());   
         pipeline.addProcessor(new VietnameseNormalizer());
         pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
-        
-        for (Post p : posts) {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+        Date date1 = sdf.parse("06-09-2024");
+        Date date2 = sdf.parse("16-11-2024");
+        System.out.println(collector.collect(keys, date1, date2));
+        /*
+        for (Post p : collector.collect(keys, date1, date2)) {
             if (!p.getComments().isEmpty()) {
                 System.out.println("Post " + p.getId() + " có " + p.getComments().size() + " bình luận:");
                 List<Comment> commentlist = p.getComments();
@@ -35,5 +34,6 @@ public class TestComment {
                 }
             }
         }
+        */
     }
 }

@@ -1,6 +1,6 @@
 package Analysis;
 
-import Model.Post;
+import Model.*;
 import Model.AnalysisResult;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +9,7 @@ import java.util.Map;
  * Interface AnalysisTask defines the common contract for all statistical analysis problems.
  * Purpose: Ensures abstraction and polymorphism, making it easy to add or remove problems.
  */
-public interface AnalysisTask {
+public interface AnalysisTask <T extends AnalysisResult> {
 
     /**
      * Executes the statistical analysis logic on the labeled Post data.
@@ -17,11 +17,10 @@ public interface AnalysisTask {
      * @return Map<String, AnalysisResult> The analysis results. The key represents the 
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
-    Map<String, AnalysisResult> execute(List<Post> data);
-
+    Map<String, T> execute(List<Comment> data);
     /**
      * Returns the display name of the analysis problem (used for UI or reporting).
      * @return The problem name (e.g., "Problem 1: Public Sentiment Tracking").
      */
-    String getProblemName();
+    //String getProblemName();
 }

@@ -1,0 +1,293 @@
+Index: Source code/OOP_Prj/src/TestBaBai/TestEx1.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package TestBaBai;\r\n\r\nimport Model.*;\r\nimport Data.*;\r\nimport PreProcessor.*;\r\nimport java.util.*;\r\nimport javafx.application.Application;\r\nimport javafx.scene.Scene;\r\nimport javafx.scene.chart.*;\r\nimport javafx.stage.Stage;\r\nimport java.time.LocalDate;\r\nimport java.time.LocalDateTime;\r\nimport java.util.*;\r\n\r\npublic class TestEx1 extends Application {\r\n\r\n    // ============================\r\n    // 1. SENTIMENT DICTIONARIES\r\n    // ============================\r\n    private static final Set<String> negativeWords = new HashSet<>(Arrays.asList(\r\n            \"bão\", \"mất\", \"bay\", \"khiếp\", \"hồn\", \"ám\", \"kinh\", \"khóc\",\r\n            \"phá\", \"tàn\", \"hỏng\", \"buồn\"\r\n    ));\r\n\r\n    private static final Set<String> positiveWords = new HashSet<>(Arrays.asList(\r\n            \"ơn\", \"ổn\", \"không\", \"an\", \"may\", \"vui\"\r\n    ));\r\n\r\n    // ============================\r\n    // STORAGE FOR CHART\r\n    // ============================\r\n    private static Map<LocalDate, Integer> positiveMap;\r\n    private static Map<LocalDate, Integer> negativeMap;\r\n\r\n\r\n    // ============================\r\n    // 2. SENTIMENT CHECKER\r\n    // ============================\r\n    public static boolean isPositive(String sentence) {\r\n        if (sentence == null) return false;\r\n\r\n        String[] words = sentence.split(\"[\\\\s\\\\p{Punct}]+\");\r\n        int pos = 0, neg = 0;\r\n\r\n        for (String w : words) {\r\n            if (positiveWords.contains(w)) pos++;\r\n            if (negativeWords.contains(w)) neg++;\r\n        }\r\n        return pos > neg;\r\n    }\r\n\r\n    // ============================\r\n    // 3. AGGREGATOR (GOM THEO NGÀY)\r\n    // ============================\r\n    public static class SentimentAggregator {\r\n\r\n        Map<LocalDate, Integer> posDay = new TreeMap<>();\r\n        Map<LocalDate, Integer> negDay = new TreeMap<>();\r\n\r\n        public void processAll(List<Post> posts, PreProcessPipeline pipeline) {\r\n\r\n            for (Post post : posts) {\r\n\r\n                // Xử lý bài post\r\n                pipeline.execute(post);\r\n                addSentence(post.getCleanContent(), post.getTimestamp());\r\n\r\n                // Xử lý comment\r\n                for (Comment c : post.getComments()) {\r\n                    pipeline.execute(c);\r\n                    addSentence(c.getCleanContent(), c.getTimestamp());\r\n                }\r\n            }\r\n        }\r\n\r\n        private void addSentence(String sentence, LocalDateTime timestamp) {\r\n            if (sentence == null || sentence.isEmpty()) return;\r\n\r\n            LocalDate day = timestamp.toLocalDate();\r\n\r\n            if (isPositive(sentence)) {\r\n                posDay.put(day, posDay.getOrDefault(day, 0) + 1);\r\n            } else {\r\n                negDay.put(day, negDay.getOrDefault(day, 0) + 1);\r\n            }\r\n        }\r\n    }\r\n\r\n    // ============================\r\n    // 4. START JAVAFX (LINE CHART)\r\n    // ============================\r\n    @Override\r\n    public void start(Stage stage) {\r\n\r\n        stage.setTitle(\"Daily Sentiment Chart\");\r\n\r\n        CategoryAxis xAxis = new CategoryAxis();\r\n        xAxis.setLabel(\"Ngày\");\r\n\r\n        NumberAxis yAxis = new NumberAxis();\r\n        yAxis.setLabel(\"Số lượng câu\");\r\n\r\n        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);\r\n        chart.setTitle(\"Positive vs Negative Sentences Per Day\");\r\n\r\n        // Series Positive\r\n        XYChart.Series<String, Number> posSeries = new XYChart.Series<>();\r\n        posSeries.setName(\"Positive\");\r\n\r\n        for (LocalDate d : positiveMap.keySet()) {\r\n            posSeries.getData().add(new XYChart.Data<>(d.toString(), positiveMap.get(d)));\r\n        }\r\n\r\n        // Series Negative\r\n        XYChart.Series<String, Number> negSeries = new XYChart.Series<>();\r\n        negSeries.setName(\"Negative\");\r\n\r\n        for (LocalDate d : negativeMap.keySet()) {\r\n            negSeries.getData().add(new XYChart.Data<>(d.toString(), negativeMap.get(d)));\r\n        }\r\n\r\n        chart.getData().addAll(posSeries, negSeries);\r\n\r\n        Scene scene = new Scene(chart, 900, 600);\r\n        stage.setScene(scene);\r\n        stage.show();\r\n    }\r\n\r\n    // ============================\r\n    // 5. MAIN LOGIC\r\n    // ============================\r\n    public static void main(String[] args) {\r\n\r\n        try {\r\n            FileCollector collector = new FileCollector();\r\n\r\n            System.out.println(\"Đang đọc Posts...\");\r\n            List<Post> posts = collector.collect(\r\n                    \"C:\\\\Users\\\\admin\\\\Pictures\\\\OOP_Project_G16_2025.1\\\\Source code\\\\OOP_Prj\\\\youtubevideos.csv\"\r\n            );\r\n            System.out.println(\"Đã đọc \" + posts.size() + \" bài viết.\");\r\n\r\n            System.out.println(\"Đang đọc Comments...\");\r\n            collector.loadComments(\r\n                    \"C:\\\\Users\\\\admin\\\\Pictures\\\\OOP_Project_G16_2025.1\\\\Source code\\\\OOP_Prj\\\\data.csv\",\r\n                    posts\r\n            );\r\n\r\n            // Preprocess pipeline\r\n            PreProcessPipeline pipeline = new PreProcessPipeline();\r\n            pipeline.addProcessor(new LowerCaseProcessor());\r\n            pipeline.addProcessor(new SpecialSymbolRemover());\r\n\r\n            // Aggregator\r\n            SentimentAggregator aggr = new SentimentAggregator();\r\n            aggr.processAll(posts, pipeline);\r\n\r\n            positiveMap = aggr.posDay;\r\n            negativeMap = aggr.negDay;\r\n\r\n            // Chạy JavaFX\r\n            Application.launch(Main.class);\r\n\r\n        } catch (Exception e) {\r\n            e.printStackTrace();\r\n        }\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Source code/OOP_Prj/src/TestBaBai/TestEx1.java b/Source code/OOP_Prj/src/TestBaBai/TestEx1.java
+--- a/Source code/OOP_Prj/src/TestBaBai/TestEx1.java	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/Source code/OOP_Prj/src/TestBaBai/TestEx1.java	(date 1765161324478)
+@@ -159,7 +159,7 @@
+             negativeMap = aggr.negDay;
+ 
+             // Chạy JavaFX
+-            Application.launch(Main.class);
++            Application.launch(args);
+ 
+         } catch (Exception e) {
+             e.printStackTrace();
+Index: Source code/OOP_Prj/src/TestBaBai/TestEx2.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Source code/OOP_Prj/src/TestBaBai/TestEx2.java b/Source code/OOP_Prj/src/TestBaBai/TestEx2.java
+--- a/Source code/OOP_Prj/src/TestBaBai/TestEx2.java	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/Source code/OOP_Prj/src/TestBaBai/TestEx2.java	(date 1765161586963)
+@@ -1,0 +1,129 @@
++package TestBaBai;
++
++import javafx.application.Application;
++import javafx.collections.FXCollections;
++import javafx.collections.ObservableList;
++import javafx.scene.Scene;
++import javafx.scene.chart.PieChart;
++import javafx.stage.Stage;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import Model.*;
++import PreProcessor.*;
++import Data.*;
++
++public class TestEx2 extends Application {
++
++    // Lưu kết quả đếm loại thiên tai
++    private static Map<String, Integer> damageTypeCount;
++
++    // ============================================
++    // 1. HÀM PHÂN LOẠI THIÊN TAI (TÙY BẠN ĐỊNH NGHĨA)
++    // ============================================
++    // Trả về label như: "bão", "lụt", "động đất", "sạt lở", ...
++    public static String getDamageTypeLabel(String sentence) {
++
++        if (sentence == null) return "khác";
++
++        // Ví dụ rule-based đơn giản (bạn thay bằng AI hay regex tùy ý)
++        if (sentence.contains("bão")) return "Bão";
++        if (sentence.contains("lụt") || sentence.contains("ngập")) return "Lũ lụt";
++        if (sentence.contains("động đất")) return "Động đất";
++        if (sentence.contains("cháy") || sentence.contains("hỏa hoạn")) return "Cháy";
++        if (sentence.contains("sạt lở")) return "Sạt lở";
++
++        return "Khác";
++    }
++
++    // ============================================
++    // 2. XỬ LÝ TẤT CẢ POST + COMMENT
++    // ============================================
++    public static class DamageAggregator {
++
++        Map<String, Integer> countMap = new HashMap<>();
++
++        public void processAll(List<Post> posts, PreProcessPipeline pipeline) {
++
++            for (Post post : posts) {
++                pipeline.execute(post);
++                add(post.getCleanContent());
++
++                for (Comment c : post.getComments()) {
++                    pipeline.execute(c);
++                    add(c.getCleanContent());
++                }
++            }
++        }
++
++        private void add(String sentence) {
++            if (sentence == null || sentence.isEmpty()) return;
++
++            String type = getDamageTypeLabel(sentence);
++            countMap.put(type, countMap.getOrDefault(type, 0) + 1);
++        }
++    }
++
++    // ============================================
++    // 3. START JAVAFX – HIỂN THỊ PIE CHART
++    // ============================================
++    @Override
++    public void start(Stage stage) {
++
++        stage.setTitle("Pie Chart – Tỷ lệ loại thiên tai");
++
++        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
++
++        for (String type : damageTypeCount.keySet()) {
++            pieData.add(new PieChart.Data(type, damageTypeCount.get(type)));
++        }
++
++        PieChart pieChart = new PieChart(pieData);
++        pieChart.setTitle("Thống kê loại thiên tai");
++        pieChart.setLabelsVisible(true);
++
++        Scene scene = new Scene(pieChart, 800, 600);
++        stage.setScene(scene);
++        stage.show();
++    }
++
++    // ============================================
++    // 4. MAIN – ĐỌC FILE, PREPROCESS, AGGREGATE
++    // ============================================
++    public static void main(String[] args) {
++
++        try {
++            FileCollector collector = new FileCollector();
++
++            System.out.println("Đang đọc Posts...");
++            List<Post> posts = collector.collect(
++                "C:\\Users\\admin\\Pictures\\OOP_Project_G16_2025.1\\Source code\\OOP_Prj\\youtubevideos.csv"
++            );
++            System.out.println("Đã đọc " + posts.size() + " bài viết.");
++
++            System.out.println("Đang đọc Comments...");
++            collector.loadComments(
++                "C:\\Users\\admin\\Pictures\\OOP_Project_G16_2025.1\\Source code\\OOP_Prj\\data.csv",
++                posts
++            );
++
++            // Preprocess pipeline
++            PreProcessPipeline pipeline = new PreProcessPipeline();
++            pipeline.addProcessor(new LowerCaseProcessor());
++            pipeline.addProcessor(new SpecialSymbolRemover());
++
++            // Aggregator
++            DamageAggregator aggregator = new DamageAggregator();
++            aggregator.processAll(posts, pipeline);
++
++            damageTypeCount = aggregator.countMap;
++
++            // Chạy JavaFX
++            Application.launch(TestEx2.class);
++
++        } catch (Exception e) {
++            e.printStackTrace();
++        }
++    }
++}
++
+Index: Source code/OOP_Prj/src/module-info.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>/**\r\n * \r\n */\r\n/**\r\n * \r\n */\r\nmodule OOP_Prj {\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Source code/OOP_Prj/src/module-info.java b/Source code/OOP_Prj/src/module-info.java
+--- a/Source code/OOP_Prj/src/module-info.java	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/Source code/OOP_Prj/src/module-info.java	(date 1765161230582)
+@@ -1,8 +1,8 @@
+-/**
+- * 
+- */
+-/**
+- * 
+- */
+ module OOP_Prj {
++    requires javafx.controls;
++    requires javafx.fxml;
++    requires javafx.graphics;
++
++    opens TestBaBai to javafx.fxml;
++    exports TestBaBai;
+ }
+\ No newline at end of file
+Index: .vscode/launch.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\r\n    \"version\": \"0.2.0\",\r\n    \"configurations\": [\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestPost\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"OOP_Prj/Test.TestPost\",\r\n            \"projectName\": \"OOP_Prj\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestEx1\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"OOP_Prj/TestBaBai.TestEx1\",\r\n            \"projectName\": \"OOP_Prj\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestEx1\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"TestBaBai.TestEx1\",\r\n            \"projectName\": \"OOP_Prj\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"Current File\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"${file}\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestComment\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"Test.TestComment\",\r\n            \"projectName\": \"OOP_Prj\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestPost\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"Test.TestPost\",\r\n            \"projectName\": \"OOP_Prj\"\r\n        },\r\n        {\r\n            \"type\": \"java\",\r\n            \"name\": \"TestEx1 (JavaFX)\",\r\n            \"request\": \"launch\",\r\n            \"mainClass\": \"TestBaBai.TestEx1\",\r\n            \"projectName\": \"OOP_Prj\",\r\n            \"vmArgs\": \"--module-path \\\"C:\\\\javafx-sdk-21\\\\lib\\\" --add-modules javafx.controls,javafx.fxml\"\r\n        }\r\n    ]\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.vscode/launch.json b/.vscode/launch.json
+--- a/.vscode/launch.json	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/.vscode/launch.json	(date 1764892916307)
+@@ -2,13 +2,6 @@
+     "version": "0.2.0",
+     "configurations": [
+         {
+-            "type": "java",
+-            "name": "TestPost",
+-            "request": "launch",
+-            "mainClass": "OOP_Prj/Test.TestPost",
+-            "projectName": "OOP_Prj"
+-        },
+-        {
+             "type": "java",
+             "name": "TestEx1",
+             "request": "launch",
+@@ -17,37 +10,23 @@
+         },
+         {
+             "type": "java",
+-            "name": "TestEx1",
++            "name": "TestPost",
+             "request": "launch",
+-            "mainClass": "TestBaBai.TestEx1",
++            "mainClass": "OOP_Prj.Test.TestPost",
+             "projectName": "OOP_Prj"
+         },
+         {
+-            "type": "java",
+-            "name": "Current File",
+-            "request": "launch",
+-            "mainClass": "${file}"
+-        },
+-        {
+             "type": "java",
+             "name": "TestComment",
+             "request": "launch",
+             "mainClass": "Test.TestComment",
+             "projectName": "OOP_Prj"
+-        },
+-        {
+-            "type": "java",
+-            "name": "TestPost",
+-            "request": "launch",
+-            "mainClass": "Test.TestPost",
+-            "projectName": "OOP_Prj"
+         },
+         {
+             "type": "java",
+             "name": "TestEx1 (JavaFX)",
+             "request": "launch",
+-            "mainClass": "TestBaBai.TestEx1",
+-            "projectName": "OOP_Prj",
++            "mainClass": "Source code.OOP_Prj.TestBaBai.TestEx1",
+             "vmArgs": "--module-path \"C:\\javafx-sdk-21\\lib\" --add-modules javafx.controls,javafx.fxml"
+         }
+     ]
+Index: Source code/OOP_Prj/src/Test/TestPost.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// File: TestPreProcessor.java (trong gói Test)\r\n\r\npackage Test;\r\n\r\nimport Model.Post;\r\nimport PreProcessor.*;\r\nimport java.time.LocalDateTime;\r\nimport java.util.ArrayList;\r\nimport java.util.List;\r\n\r\nimport Data.FileCollector;\r\n\r\npublic class TestPost {\r\n\r\n    public static void main(String[] args) {\r\n        \r\n    \tFileCollector collector = new FileCollector();\r\n        \r\n        List<Post> posts = collector.collect(\"C:\\\\Users\\\\admin\\\\Pictures\\\\OOP_Project_G16_2025.1\\\\Source code\\\\OOP_Prj\\\\youtubevideos.csv\");\r\n        \r\n        PreProcessPipeline pipeline = new PreProcessPipeline();\r\n        \r\n        pipeline.addProcessor(new LowerCaseProcessor());    \r\n       \r\n\r\n        System.out.println(\"--- BẮT ĐẦU KIỂM THỬ PREPROCESSOR ---\");\r\n        \r\n        for (Post post : posts) {\r\n           \r\n            pipeline.execute(post);\r\n            \r\n            System.out.println(\"---------------------------------\");\r\n            System.out.println(\"ID: \" + post.getId());\r\n            System.out.println(\"RAW:  \" + post.getDamageTypeLabel());\r\n            System.out.println(\"CLEAN: \" + post.getCleanContent());\r\n        }\r\n        \r\n        System.out.println(\"--- CHECK DONE ---\");\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Source code/OOP_Prj/src/Test/TestPost.java b/Source code/OOP_Prj/src/Test/TestPost.java
+--- a/Source code/OOP_Prj/src/Test/TestPost.java	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/Source code/OOP_Prj/src/Test/TestPost.java	(date 1764842850354)
+@@ -31,7 +31,7 @@
+             
+             System.out.println("---------------------------------");
+             System.out.println("ID: " + post.getId());
+-            System.out.println("RAW:  " + post.getDamageTypeLabel());
++            System.out.println("RAW:  " + post.getRawContent());
+             System.out.println("CLEAN: " + post.getCleanContent());
+         }
+         
+Index: Source code/OOP_Prj/.project
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<projectDescription>\r\n\t<name>OOP_Prj</name>\r\n\t<comment></comment>\r\n\t<projects>\r\n\t</projects>\r\n\t<buildSpec>\r\n\t\t<buildCommand>\r\n\t\t\t<name>org.eclipse.jdt.core.javabuilder</name>\r\n\t\t\t<arguments>\r\n\t\t\t</arguments>\r\n\t\t</buildCommand>\r\n\t</buildSpec>\r\n\t<natures>\r\n\t\t<nature>org.eclipse.jdt.core.javanature</nature>\r\n\t</natures>\r\n\t<linkedResources>\r\n\t\t<link>\r\n\t\t\t<name>Data</name>\r\n\t\t\t<type>2</type>\r\n\t\t\t<location>C:/Users/bestt/Downloads/OOP_Project_G16_2025.1-feature-data-scraping/OOP_Project_G16_2025.1-feature-data-scraping/src/youtubecollector</location>\r\n\t\t</link>\r\n\t</linkedResources>\r\n</projectDescription>\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Source code/OOP_Prj/.project b/Source code/OOP_Prj/.project
+--- a/Source code/OOP_Prj/.project	(revision 2078736b2b8746ab13c8ba5ec5767b15631f1c9d)
++++ b/Source code/OOP_Prj/.project	(date 1764842785702)
+@@ -21,4 +21,15 @@
+ 			<location>C:/Users/bestt/Downloads/OOP_Project_G16_2025.1-feature-data-scraping/OOP_Project_G16_2025.1-feature-data-scraping/src/youtubecollector</location>
+ 		</link>
+ 	</linkedResources>
++	<filteredResources>
++		<filter>
++			<id>1764842785687</id>
++			<name></name>
++			<type>30</type>
++			<matcher>
++				<id>org.eclipse.core.resources.regexFilterMatcher</id>
++				<arguments>node_modules|\.git|__CREATED_BY_JAVA_LANGUAGE_SERVER__</arguments>
++			</matcher>
++		</filter>
++	</filteredResources>
+ </projectDescription>
