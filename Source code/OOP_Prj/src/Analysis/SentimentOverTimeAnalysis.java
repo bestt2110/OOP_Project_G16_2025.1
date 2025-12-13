@@ -1,106 +1,80 @@
 package Analysis;
 
 import Model.*;
-import java.time.*;
+import java.time.ZoneId;
 import java.util.*;
 
 public class SentimentOverTimeAnalysis implements AnalysisTask<SentimentResult> {
 
-    private static final List<String> POSITIVE_WORDS = Arrays.asList("an", "ổn", "toàn");
-    private static final List<String> NEGATIVE_WORDS = Arrays.asList("tử", "mất", "hỏng");
+    private static final List<String> POSITIVE_WORDS = Arrays.asList(
+            "an toàn", "bình an", "ổn", "đỡ rồi", "qua khỏi", "sống sót", "khỏe",
+            "cảm ơn", "biết ơn", "tri ân", "tuyệt vời", "ấm lòng", "tốt", "ngon", 
+            "chu đáo", "nhiệt tình", "kịp thời", "quý hóa", 
+            "cố lên", "kiên cường", "vượt qua", "khắc phục", "đồng bào"
+    );
 
-    /**
-     * Phân loại sentiment của 1 câu bình luận
-     */
+    private static final List<String> NEGATIVE_WORDS = Arrays.asList(
+            "tử vong", "chết", "mất tích", "thi thể", "bị thương", "tang thương",
+            "sập", "đổ", "trôi", "cuốn trôi", "ngập", "hỏng", "hư hại", "tan hoang", "trắng tay",
+            "cô lập", "chia cắt", "kêu cứu", "mắc kẹt", "kiệt sức", "lạnh", "rét", 
+            "đói", "khát", "thiếu thốn", "hết sạch", "chưa có",
+            "lo lắng", "sợ hãi", "hoang mang", "tuyệt vọng", "đau xót", "khổ", "buồn"
+    );
+
+    private enum SentimentLabel { POSITIVE, NEGATIVE, NEUTRAL, UNKNOWN }
+
+    // Hàm thực thi chính - KHÔNG CẦN ÉP KIỂU
+    @Override
+    public void execute(Post p, Map<String, SentimentResult> result) {
+        // 1. Xử lý Post
+        String pDateKey = getDateStr(p.getTimestamp());
+        if (pDateKey != null) {
+            SentimentLabel label = classifySentiment(p.getCleanContent());
+            updateMap(result, pDateKey, label);
+        }
+
+        // 2. Xử lý Comment
+        if (p.getComments() != null) {
+            for (Comment c : p.getComments()) {
+                String cDateKey = getDateStr(c.getTimestamp());
+                if (cDateKey != null) {
+                    SentimentLabel label = classifySentiment(c.getCleanContent());
+                    updateMap(result, cDateKey, label);
+                }
+            }
+        }
+    }
+
+    // Hàm update nhận Map<String, SentimentResult> -> Lấy ra dùng luôn
+    private void updateMap(Map<String, SentimentResult> result, String key, SentimentLabel label) {
+        if (label == SentimentLabel.UNKNOWN || label == SentimentLabel.NEUTRAL) return;
+
+        // Tự động hiểu là SentimentResult, không cần ép kiểu
+        SentimentResult sr = result.getOrDefault(key, new SentimentResult());
+
+        if (label == SentimentLabel.POSITIVE) {
+            sr.setPositiveCount(sr.getPositiveCount() + 1);
+        } else if (label == SentimentLabel.NEGATIVE) {
+            sr.setNegativeCount(sr.getNegativeCount() + 1);
+        }
+        
+        result.put(key, sr);
+    }
+
     private SentimentLabel classifySentiment(String content) {
         if (content == null || content.isEmpty()) return SentimentLabel.UNKNOWN;
-
         String lower = content.toLowerCase();
         int pos = 0, neg = 0;
-
         for (String w : POSITIVE_WORDS) if (lower.contains(w)) pos++;
         for (String w : NEGATIVE_WORDS) if (lower.contains(w)) neg++;
-
-        if (pos == 0 && neg == 0) return SentimentLabel.NEUTRAL;
+        
         if (pos > neg) return SentimentLabel.POSITIVE;
         if (neg > pos) return SentimentLabel.NEGATIVE;
         return SentimentLabel.NEUTRAL;
     }
 
-    /**
-     * Hàm execute cải tiến: trả về Map<LocalDate, SentimentCount>
-     */
-    /*
-    @Override
-    public Map<String, SentimentResult> execute(List<Comment> comments) {
-
-        Map<String, SentimentResult> result = new HashMap<>();
-
-        for (Comment c : comments) {
-            if (c.getTimestamp() == null) continue;
-
-            Date date = c.getTimestamp();
-            SentimentLabel label = classifySentiment(c.getCleanContent());
-
-            // Lấy hoặc tạo mới object count
-            SentimentResult count = result.getOrDefault(date, new SentimentResult());
-
-            if (label == SentimentLabel.POSITIVE) count.setPositiveCount(count.getPositiveCount() + 1); 
-            if (label == SentimentLabel.NEGATIVE) count.setNegativeCount(count.getNegativeCount() + 1);
-            LocalDate localDate = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate();
-
-            String stringDate = localDate.toString();
-            result.put(stringDate, count);
-        }
-
-        return result;
-    }
-    */
-    @Override
-    public void execute(Post p, HashMap<String, SentimentResult> result) {
-
-        //Map<String, SentimentResult> result = new HashMap<>();
-        
-        Date pDate = p.getTimestamp();
-        int pCount = 0;
-        int nCount = 0;
-        if (!p.getComments().isEmpty()) {
-        	List<Comment> comments = p.getComments();
-	        for (Comment c : comments) {
-	            if (c.getTimestamp() == null) continue;
-	
-	            Date date = c.getTimestamp();
-	            SentimentLabel label = classifySentiment(c.getCleanContent());
-	
-	            // Lấy hoặc tạo mới object count
-	            SentimentResult count = result.getOrDefault(date, new SentimentResult());
-	
-	            if (label == SentimentLabel.POSITIVE) {
-	            	count.setPositiveCount(count.getPositiveCount() + 1);
-	            	pCount+=1;
-	            }
-	            if (label == SentimentLabel.NEGATIVE) {
-	            	count.setNegativeCount(count.getNegativeCount() + 1);
-	            	nCount+=1;
-	            }
-		
-		        String stringDate = date.toString();
-		        result.put(stringDate, count);
-	        }
-        }
-        SentimentResult postcount = result.getOrDefault(pDate, new SentimentResult());
-        SentimentLabel label = classifySentiment(p.getCleanContent());
-        if (label == SentimentLabel.POSITIVE) {
-        	postcount.setPositiveCount(postcount.getPositiveCount() + 1 + pCount);
-        }
-        if (label == SentimentLabel.NEGATIVE) {
-        	postcount.setNegativeCount(postcount.getNegativeCount() + 1 + nCount);
-        }
-
-        String stringDate = pDate.toString();
-        result.put(stringDate, postcount);
+    private String getDateStr(Date date) {
+        if (date == null) return null;
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString();
     }
 }
-

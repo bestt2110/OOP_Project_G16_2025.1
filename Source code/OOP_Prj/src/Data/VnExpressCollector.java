@@ -35,7 +35,7 @@ public class VnExpressCollector implements IDataCollector {
         int totalProcessed = 0;
         final int MAX_ARTICLES = 30;
         
-        System.out.println("1. Bắt đầu tìm kiếm từ khóa: " + query);
+        System.out.println("VnExpress Search Query " + query);
         
         int currentPage = 1;
         try {
@@ -43,7 +43,7 @@ public class VnExpressCollector implements IDataCollector {
             
             while (totalProcessed < MAX_ARTICLES) {
                 String searchUrl = SEARCH_URL_BASE + encodedQuery + "&siteid=1000000&page=" + currentPage;
-                System.out.println("2. Đang truy cập trang tìm kiếm: " + searchUrl);
+                System.out.println("Accessing page: " + searchUrl);
                 
                 Document searchPage = Jsoup.connect(searchUrl)
                                            .userAgent(USER_AGENT)
@@ -52,7 +52,7 @@ public class VnExpressCollector implements IDataCollector {
                 // Thử selector rộng hơn một chút để chắc chắn bắt được link
                 Elements articleLinks = searchPage.select(".item-news h3 a");
                 
-                System.out.println("   -> Tìm thấy " + articleLinks.size() + " đường link trên trang này.");
+                System.out.println(articleLinks.size() + " found");
                 
                 if (articleLinks.isEmpty()) {
                     System.out.println("   -> CẢNH BÁO: Không thấy link nào. Có thể hết kết quả hoặc sai Selector.");
@@ -63,10 +63,10 @@ public class VnExpressCollector implements IDataCollector {
                     if (totalProcessed >= MAX_ARTICLES) break;
 
                     String articleUrl = link.attr("abs:href");
-                    System.out.println("   -> Đang xử lý link: " + articleUrl);
+                    System.out.println("   -> Processing: " + articleUrl);
                     
                     if (processedUrls.contains(articleUrl)) {
-                        System.out.println("      -> Link này đã duyệt rồi. Bỏ qua.");
+                        System.out.println("      -> Already collected. Pass");
                         continue;
                     }
                     processedUrls.add(articleUrl);
@@ -81,12 +81,12 @@ public class VnExpressCollector implements IDataCollector {
                         if (isAfterStart && isBeforeEnd) {
                             collectedData.add(article);
                             totalProcessed++;
-                            System.out.println("      -> ✅ CHẤP NHẬN: " + link.text());
+                            System.out.println("      -> ✅ ACCEPTED: " + link.text());
                         } else {
-                            System.out.println("      -> ❌ LOẠI DO NGÀY THÁNG: Ngày bài (" + DATE_FORMATTER.format(articleDate) + ") không nằm trong khoảng lọc.");
+                            System.out.println("      -> ❌ REJECTED:  (" + DATE_FORMATTER.format(articleDate) + ") isn't in filtering period");
                         }
                     } else {
-                        System.out.println("      -> ❌ LOẠI DO LỖI: Không cào được nội dung hoặc ngày tháng.");
+                        System.out.println("      -> ❌ REJECTED: CONTENT OR DATE CAN'T BE SCRAPED");
                     }
                     Thread.sleep(1000); 
                 }
@@ -95,7 +95,7 @@ public class VnExpressCollector implements IDataCollector {
             }
 
         } catch (IOException e) {
-            System.err.println("Lỗi kết nối: " + e.getMessage());
+            System.err.println("Connecting error " + e.getMessage());
         } catch (InterruptedException e) {
              Thread.currentThread().interrupt();
         }
@@ -137,14 +137,14 @@ public class VnExpressCollector implements IDataCollector {
             
             if (finalDate == null) {
                 // IN RA LỖI ĐỂ BIẾT TẠI SAO NGÀY NULL
-                System.out.println("      -> ⚠️ Cảnh báo: Không parse được ngày. Chuỗi gốc là: '" + rawtimeStr + "'");
+                System.out.println("      -> ⚠️ WARNING: CAN'T PARSE DATE. ORIGINAL STRING WAS '" + rawtimeStr + "'");
                 return null; 
             }
             
             return new Post(postId, fullText, finalDate, 0, 0);
 
         } catch (Exception e) {
-            System.err.println("      -> Lỗi exception khi cào: " + e.getMessage());
+            System.err.println("      -> ERROR WHEN SCRAPING " + e.getMessage());
             return null;
         }
     }

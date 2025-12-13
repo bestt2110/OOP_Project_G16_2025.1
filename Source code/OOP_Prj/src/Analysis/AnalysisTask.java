@@ -1,10 +1,10 @@
 package Analysis;
 
 import Model.*;
+
 import Model.AnalysisResult;
 
-import java.util.HashMap;
-import java.util.List;
+
 import java.util.Map;
 
 /**
@@ -13,13 +13,14 @@ import java.util.Map;
  */
 public interface AnalysisTask <T extends AnalysisResult> {
 
+
     /**
      * Executes the statistical analysis logic on the labeled Post data.
      * @param data A list of Post objects that have been pre-processed and labeled.
      * @return Map<String, AnalysisResult> The analysis results. The key represents the 
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
-    void execute(Post data, HashMap<String, T> result);
+    void execute(Post data, Map<String, T> result);
     /**
      * Returns the display name of the analysis problem (used for UI or reporting).
      * @return The problem name (e.g., "Problem 1: Public Sentiment Tracking").

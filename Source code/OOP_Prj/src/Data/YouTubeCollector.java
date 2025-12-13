@@ -11,19 +11,19 @@ import Model.Comment;
 import java.math.BigInteger;
 import java.util.*;
 
-// 1. Phải implements IDataCollector
 public class YouTubeCollector implements IDataCollector {
     
     private final YouTube youtube;
     private final String apiKey;
+    private static final String YOUTUBE_API_KEY = "AIzaSyAKBxo0ajeIiRFVFtyJcGX9rQCdz1Sst7E"; 
 
-    public YouTubeCollector(String apiKey) throws Exception {
+    public YouTubeCollector() throws Exception {
         youtube = new YouTube.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 null
         ).setApplicationName("HumanitarianLogisticsDataCollector").build();
-        this.apiKey = apiKey;
+        this.apiKey = YOUTUBE_API_KEY;
     }
 
     @Override
@@ -31,7 +31,6 @@ public class YouTubeCollector implements IDataCollector {
         System.out.println("YouTube Collector Initialized.");
     }
 
-    // 2. Phải có hàm collect đúng chuẩn Interface
     @Override
     public List<Post> collect(List<String> keywords, Date startDate, Date endDate) {
         List<Post> allPosts = new ArrayList<>();
@@ -39,22 +38,39 @@ public class YouTubeCollector implements IDataCollector {
             String query = String.join(" ", keywords);
             System.out.println("YouTube Search Query: " + query);
             
-            // Gọi hàm search video
-            allPosts = searchVideos(query, 30); // Lấy 30 video demo
+            // 1. Gọi hàm search video
+            allPosts = searchVideos(query, 30); 
 
-            // Lọc ngày tháng (nếu cần thiết, dù search youtube đã khá chuẩn rồi)
-            // Và quan trọng: LẤY COMMENT CHO TỪNG VIDEO
-            for (Post p : allPosts) {
-                // Kiểm tra ngày tháng
-                if (startDate != null && p.getTimestamp().before(startDate)) continue;
-                if (endDate != null && p.getTimestamp().after(endDate)) continue;
+            // 2. Lấy comment cho từng video (CÓ LỌC NGÀY)
+            Iterator<Post> iterator = allPosts.iterator();
+            while (iterator.hasNext()) {
+                Post p = iterator.next();
 
-                // 3. Gọi hàm lấy comment và add vào Post
-                System.out.println(" -> Lấy comment cho video: " + p.getId());
-                List<Comment> comments = getComments(p.getId(), 50); // Lấy tối đa 50 cmt
+                // Lọc video (Level 1): Nếu video đăng sai ngày -> Xóa khỏi list luôn
+                if (startDate != null && p.getTimestamp().before(startDate)) {
+                    iterator.remove(); continue;
+                }
+                if (endDate != null && p.getTimestamp().after(endDate)) {
+                    iterator.remove(); continue;
+                }
+                
+                
+                
+                
+                // --- [UPDATE] TRUYỀN NGÀY VÀO HÀM LẤY COMMENT ---
+                
+                List<Comment> comments = getComments(p.getId(), 50, startDate, endDate);
+                
                 for (Comment c : comments) {
+                	if (startDate != null && p.getTimestamp().before(startDate)) {
+                        iterator.remove(); continue;
+                    }
+                    if (endDate != null && p.getTimestamp().after(endDate)) {
+                        iterator.remove(); continue;
+                    }
                     p.addComment(c);
                 }
+                System.out.println(" Finish collecting from post " + p.getId());
             }
 
         } catch (Exception e) {
@@ -81,10 +97,8 @@ public class YouTubeCollector implements IDataCollector {
             String title = sr.getSnippet().getTitle();
             String desc = sr.getSnippet().getDescription();
             
-            // 4. FIX LỖI NGÀY THÁNG: Lấy mili-giây trực tiếp
             Date publishedAt = new Date(sr.getSnippet().getPublishedAt().getValue());
 
-            // Get statistics
             YouTube.Videos.List statsReq = youtube.videos()
                     .list("statistics")
                     .setId(videoId)
@@ -100,41 +114,55 @@ public class YouTubeCollector implements IDataCollector {
                 BigInteger likeCountBI = stats.getLikeCount();
                 int likeCount = (likeCountBI != null) ? likeCountBI.intValue() : 0;
                 
-                // Nội dung post = Title + Description
                 String fullContent = title + "\n" + desc;
 
                 videos.add(new Post(videoId, fullContent, publishedAt, likeCount, commentCount));
             }
         }
-        return videos;       
+        return videos;        
     }
 
-    /** Helper: Get comments for a video **/
-    private List<Comment> getComments(String videoId, int maxComments) throws Exception {
+    /** * [UPDATE] Helper: Get comments for a video WITH DATE FILTER 
+     * Thêm tham số startDate, endDate để lọc ngay tại nguồn
+     **/
+    private List<Comment> getComments(String videoId, int maxComments, Date startDate, Date endDate) throws Exception {
         try {
             YouTube.CommentThreads.List request = youtube.commentThreads()
                     .list("snippet")
                     .setVideoId(videoId)
-                    .setMaxResults(20L) // Mỗi trang 20 cmt
+                    .setMaxResults(20L)
                     .setOrder("relevance")
                     .setKey(apiKey);
             
             List<Comment> comments = new ArrayList<>();
             
+            // Vòng lặp lấy trang tiếp theo nếu cần
             while (comments.size() < maxComments) {
                 CommentThreadListResponse response = request.execute();
+                
                 for (CommentThread ct : response.getItems()) {
                     if (comments.size() >= maxComments) break;
                     
                     CommentSnippet snip = ct.getSnippet().getTopLevelComment().getSnippet();
+                    
+                    // Lấy ngày đăng comment
+                    Date cmtDate = new Date(snip.getPublishedAt().getValue());
+                    
+                    // =========================================================
+                    // [QUAN TRỌNG] LỌC NGÀY COMMENT TẠI ĐÂY
+                    // =========================================================
+                    if (startDate != null && cmtDate.before(startDate)) {
+                        continue; // Bỏ qua nếu comment quá cũ
+                    }
+                    if (endDate != null && cmtDate.after(endDate)) {
+                        continue; // Bỏ qua nếu comment quá mới (so với khoảng chọn)
+                    }
+                    // =========================================================
+
                     String content = snip.getTextOriginal();
                     if (content == null) content = snip.getTextDisplay();
                     
                     String cmtId = ct.getSnippet().getTopLevelComment().getId();
-                    
-                    // Fix lỗi ngày tháng tương tự
-                    Date cmtDate = new Date(snip.getPublishedAt().getValue());
-                    
                     long likeL = (snip.getLikeCount() != null) ? snip.getLikeCount() : 0;
                     int finalLike = (int) likeL;
                     
@@ -146,14 +174,16 @@ public class YouTubeCollector implements IDataCollector {
                             finalLike
                     ));
                 }
+                
                 String nextToken = response.getNextPageToken();
                 if (nextToken == null || nextToken.isEmpty()) break;
                 request.setPageToken(nextToken);
             }
             return comments;
+            
         } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
             if (e.getStatusCode() == 403) {
-                // System.out.println(" ⚠ Skipping comments (disabled) for " + videoId);
+                // Comment bị tắt
                 return Collections.emptyList();
             }
             throw e; 

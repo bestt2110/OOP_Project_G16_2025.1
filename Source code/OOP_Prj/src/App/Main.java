@@ -2,176 +2,87 @@ package App;
 
 import Data.*;
 import Model.*;
+import PreProcessor.*;
 import Analysis.*;
-import PreProcessor.LowerCaseProcessor;
-import PreProcessor.PreProcessPipeline;
-import PreProcessor.SpecialSymbolRemover;
-import PreProcessor.StopWordsRemover;
-import PreProcessor.VietnameseNormalizer;
+import UI.UI;
+import javafx.application.Application;
+import javafx.application.Platform;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Main {
     
-    // API Key YouTube (Điền key của bạn vào đây)
-    private static final String YOUTUBE_API_KEY = "AIzaSyAKBxo0ajeIiRFVFtyJcGX9rQCdz1Sst7E"; 
+    // --- KHO DỮ LIỆU TẬP TRUNG ---
+    public static List<Post> globalData = new ArrayList<>();
     
-    private static final SimpleDateFormat INPUT_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        Application.launch(UI.class, args);
+    }
+
+    // =========================================================
+    // HÀM XỬ LÝ LOGIC TRUNG TÂM (KHÔNG LỌC NGÀY)
+    // =========================================================
+    public static void processDataRequest(String source, String keywords, Date reqStart, Date reqEnd, UI uiController) {
         
-        try {
-            System.out.println("=== CHƯƠNG TRÌNH THU THẬP DỮ LIỆU ===");
-            System.out.println("1. VnExpress (Báo chí)");
-            System.out.println("2. YouTube (Mạng xã hội)");
-            System.out.println("3. Từ File CSV có sẵn (Offline)");
-            System.out.print("Nhập lựa chọn (1-3): ");
-            
-            int choice = 0;
+        new Thread(() -> {
             try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Lựa chọn không hợp lệ.");
-                return;
-            }
-            
-            IDataCollector collector = null;
-            String outputPrefix = "data";
-            
-            // Các tham số để truyền vào hàm collect
-            List<String> keywords = null;
-            Date startDate = null;
-            Date endDate = null;
+                // 1. Cập nhật trạng thái
+                Platform.runLater(() -> uiController.updateStatus("⏳ Connecting to " + source + "..."));
 
-            switch (choice) {
-                case 1: // VnExpress
+                // 2. Chọn Collector
+                IDataCollector collector;
+                List<String> kwList = (keywords != null && !keywords.isEmpty()) 
+                        ? Arrays.asList(keywords.split(",")) : new ArrayList<>();
+
+                if (source.contains("File")) {
+                    collector = new FileCollector("vnexpress_posts.csv"); 
+                } else if (source.contains("YouTube")) {
+                    collector = new YouTubeCollector();
+                } else {
                     collector = new VnExpressCollector();
-                    outputPrefix = "vnexpress";
-                    break;
-                    
-                case 2: // YouTube
-                    collector = new YouTubeCollector(YOUTUBE_API_KEY);
-                    outputPrefix = "youtube";
-                    break;
-                    
-                case 3: // File
-                    System.out.print("Nhập đường dẫn file (vd: vnexpress_posts.csv): ");
-                    String filePath = scanner.nextLine();
-                    collector = new FileCollector(filePath);
-                    outputPrefix = "file_processed";
-                    break;
-                    
-                default:
-                    System.out.println("Lựa chọn sai.");
+                }
+
+                // 3. Thu thập dữ liệu
+                collector.initialize(new HashMap<>());
+                
+                List<Post> rawPosts = collector.collect(kwList, reqStart, reqEnd);
+
+                if (rawPosts.isEmpty()) {
+                    Platform.runLater(() -> {
+                        uiController.updateStatus("⚠️ No posts found.");
+                        globalData.clear();
+                    });
                     return;
-            }
+                }
 
-            // --- NHẬP THAM SỐ (Chỉ dành cho Web, File thì bỏ qua để lấy hết) ---
-            if (choice != 3) {
-                System.out.print("Nhập từ khóa (cách nhau bởi dấu phẩy): ");
-                String kwInput = scanner.nextLine();
-                keywords = Arrays.asList(kwInput.split(","));
-                
-                System.out.print("Ngày bắt đầu (dd/MM/yyyy): ");
-                startDate = INPUT_DATE_FORMAT.parse(scanner.nextLine() + " 00:00");
-                
-                System.out.print("Ngày kết thúc (dd/MM/yyyy): ");
-                endDate = INPUT_DATE_FORMAT.parse(scanner.nextLine() + " 23:59");
-            } else {
-                System.out.println("-> Chế độ File: Sẽ đọc toàn bộ dữ liệu trong file.");
-            }
+                Platform.runLater(() -> uiController.updateStatus("🧹 Cleaning " + rawPosts.size() + " posts..."));
 
-            // Khởi tạo
-            collector.initialize(new HashMap<>());
-            
-            // --- CHẠY COLLECT (Đa hình) ---
-            System.out.println("\nĐang tiến hành thu thập dữ liệu...");
-            List<Post> records = collector.collect(keywords, startDate, endDate);
-            
-            if (choice != 3) {
-            saveDataToCsv(records, outputPrefix);
-            }
-            else {
-            	System.out.println("\nThu thập dữ liệu thành công");
-            }
-            PreProcessPipeline pipeline = new PreProcessPipeline();
-            pipeline.addProcessor(new LowerCaseProcessor());   
-            pipeline.addProcessor(new SpecialSymbolRemover());   
-            pipeline.addProcessor(new VietnameseNormalizer());
-            pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
-            
-            //List<Comment> allComments = new ArrayList<>();
-            
-            for (Post p : records) {
-            	System.out.println("Bắt đầu tiền xử lí post " + p.getId());
-            	pipeline.execute(p);
-            	System.out.println("Tiền xử lí post " + p.getId() + " hoàn thành");
-                if (!p.getComments().isEmpty()) {
-                    System.out.println("Post " + p.getId() + " có " + p.getComments().size() + " bình luận:");
-                    List<Comment> commentlist = p.getComments();
-                    for (Comment c: commentlist) {
-                    	pipeline.execute(c);
-                    	//allComments.add(c);
-                        System.out.println("   - [" + c.getId() + "] " + c.getCleanContent());
+                // 4. Tiền xử lý (Pipeline) - Làm sạch text
+                PreProcessPipeline pipeline = new PreProcessPipeline();
+                pipeline.addProcessor(new LowerCaseProcessor());
+                pipeline.addProcessor(new SpecialSymbolRemover());
+                // pipeline.addProcessor(new VietnameseNormalizer());
+
+                for (Post p : rawPosts) {
+                    pipeline.execute(p);
+                    if (p.getComments() != null) {
+                        for (Comment c : p.getComments()) pipeline.execute(c);
                     }
                 }
-            }
-            
-            SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
-            //DamageCategoryAnalysis engine = new DamageCategoryAnalysis();
-            //SatisfactionAnalysis engine = new SatisfactionAnalysis();
-            HashMap<String, SentimentResult> result = new HashMap<>();
-            for (Post p: records) {
-            	engine.execute(p,result);
-            }
-            System.out.println(result);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            scanner.close();
-        }
-    }
 
-    private static void saveDataToCsv(List<Post> records, String prefix) {
-        if (records.isEmpty()) {
-            System.out.println("⚠️ Không có dữ liệu để lưu.");
-            return;
-        }
+                // 5. Cập nhật vào Kho dữ liệu chung (RAW)
+                globalData = rawPosts;
 
-        List<String[]> postRows = new ArrayList<>();
-        postRows.add(new String[]{"postId", "content", "publishedAt", "likeCount", "commentCount"});
-
-        List<String[]> commentRows = new ArrayList<>();
-        commentRows.add(new String[]{"postId", "commentId", "content", "timestamp", "likeCount"});
-
-        SimpleDateFormat csvFmt = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-
-        for (Post p : records) {
-            String cleanText = (p.getRawContent() != null) ? p.getRawContent().trim() : "";
-            String dateStr = (p.getTimestamp() != null) ? csvFmt.format(p.getTimestamp()) : "";
-            
-            postRows.add(new String[]{
-                p.getId(), cleanText, dateStr, 
-                String.valueOf(p.getLike()), String.valueOf(p.getCmt())
-            });
-
-            for (Comment c : p.getComments()) {
-                String cmtText = (c.getRawContent() != null) ? c.getRawContent().trim() : "";
-                String cmtDate = (c.getTimestamp() != null) ? csvFmt.format(c.getTimestamp()) : "";
-                
-                commentRows.add(new String[]{
-                    p.getId(), c.getId(), cmtText, cmtDate, String.valueOf(c.getLikeCount())
+                // 6. Báo cáo hoàn tất
+                Platform.runLater(() -> {
+                    uiController.updateStatus("✅ Done " + globalData.size() + " collected");
+                    uiController.enableAnalysisButtons(); 
                 });
-            }
-        }
 
-        CSVWriterUtil.writeCsv(prefix + "_posts.csv", postRows);
-        if (commentRows.size() > 1) {
-            CSVWriterUtil.writeCsv(prefix + "_comments.csv", commentRows);
-        }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Platform.runLater(() -> uiController.updateStatus("❌ Lỗi: " + e.getMessage()));
+            }
+        }).start();
     }
-    
 }

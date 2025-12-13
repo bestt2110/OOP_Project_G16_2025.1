@@ -1,346 +1,359 @@
 package UI;
 
+import App.Main; 
+import Analysis.*;
+import Model.*;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
-import Analysis.*;
-import Model.*;
-import PreProcessor.*;
-import Data.*;
-import App.*;
-
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class UI extends Application {
 
-    private Scene homeScene;    
-    private Scene mainScene;    
-    private Scene chartScene;   
     private Stage stageRef;
+    
+    // Khai báo các Scene
+    private Scene homeScene;       
+    private Scene dashboardScene;  
+    
+    // DatePicker toàn cục
+    private DatePicker dpStart;
+    private DatePicker dpEnd; 
+    
+    // Controls
+    private Label lblStatus;
+    private Button btnP1, btnP2, btnP3; 
+    private Button btnRun;
+    private ProgressIndicator progressIndicator;
 
     @Override
     public void start(Stage primaryStage) {
         stageRef = primaryStage;
         primaryStage.setTitle("Java Project - Group 16");
 
+        // 1. Khởi tạo giao diện
         createHomeScene();
-        createMainScene();
+        createDashboardScene(); 
 
+        // 2. Mặc định vào trang chủ
         primaryStage.setScene(homeScene);
-        primaryStage.setWidth(900);
-        primaryStage.setHeight(600);
         primaryStage.show();
     }
 
     // ==============================
-    // 1. GIAO DIỆN TRANG CHỦ
+    // 1. GIAO DIỆN TRANG CHỦ (HOME)
     // ==============================
     private void createHomeScene() {
         Label title = new Label("JAVA PROJECT BY GROUP 16");
-        title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold;");
+        title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
-        Button btnAnalysis = new Button("Phân tích dữ liệu");
-        Button btnMembers = new Button("Thông tin thành viên");
+        Button btnAnalysis = new Button("Data Analysis");
         Button btnExit = new Button("Exit");
 
-        btnAnalysis.setPrefWidth(200);
-        btnMembers.setPrefWidth(200);
-        btnExit.setPrefWidth(200);
+        String btnStyle = "-fx-font-size: 16px; -fx-pref-width: 250px; -fx-pref-height: 40px; -fx-cursor: hand;";
+        btnAnalysis.setStyle(btnStyle);
+        btnExit.setStyle(btnStyle);
 
-        btnAnalysis.setOnAction(e -> stageRef.setScene(mainScene));
-        btnExit.setOnAction(e -> stageRef.close());
+        // Sự kiện
+        btnAnalysis.setOnAction(e -> {
+            // Nếu Main đã chạy xong từ Console thì cập nhật trạng thái ngay
+            if (!Main.globalData.isEmpty()) {
+                lblStatus.setText("✅ " + Main.globalData.size() + " collected");
+                enableAnalysisButtons();
+            }
+            stageRef.setScene(dashboardScene);
+        });
+        
+        btnExit.setOnAction(e -> {
+            System.exit(0);
+        });
 
-        VBox box = new VBox(25, title, btnAnalysis, btnMembers, btnExit);
+        VBox box = new VBox(25, title, btnAnalysis, btnExit);
         box.setAlignment(Pos.CENTER);
 
         StackPane root = new StackPane(box);
         root.setPadding(new Insets(20));
 
-        homeScene = new Scene(root);
+        homeScene = new Scene(root, 900, 600);
     }
 
     // ==============================
-    // 2. GIAO DIỆN CHỌN BIỂU ĐỒ
+    // 2. GIAO DIỆN CHÍNH (DASHBOARD)
     // ==============================
-    private void createMainScene() {
-        Button btnLine = new Button("Line Chart");
-        Button btnPie = new Button("Pie Chart");
-        Button btnBar = new Button("Bar Chart");
-        Button btnBack = new Button("< Back");
+    private void createDashboardScene() {
+        // --- HEADER ---
+        // Nút quay về Home
+        Button btnHome = new Button("⬅ Home Screen");
+        btnHome.setStyle("-fx-font-size: 14px; -fx-cursor: hand; -fx-base: #ecf0f1;");
+        btnHome.setOnAction(e -> stageRef.setScene(homeScene));
 
-        btnLine.setPrefWidth(150);
-        btnPie.setPrefWidth(150);
-        btnBar.setPrefWidth(150);
+        Label lblTitle = new Label("DATA ANALYSIS DASHBOARD");
+        lblTitle.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        lblTitle.setStyle("-fx-text-fill: #2c3e50;");
 
-        btnBack.setOnAction(e -> stageRef.setScene(homeScene));
-        btnLine.setOnAction(e -> showChartScene(createLineChart()));
-        btnPie.setOnAction(e -> showChartScene(createPieChart()));
-        btnBar.setOnAction(e -> showChartScene(createBarChart()));
+        // Đặt nút Home và Title cùng 1 hàng
+        BorderPane header = new BorderPane();
+        header.setLeft(btnHome);
+        header.setCenter(lblTitle);
+        // Căn chỉnh để Title vẫn ở giữa dù có nút Home bên trái
+        BorderPane.setAlignment(lblTitle, Pos.CENTER);
+        BorderPane.setMargin(lblTitle, new Insets(0, 100, 0, 0));
 
-        VBox menuBox = new VBox(20, btnLine, btnPie, btnBar, btnBack);
-        menuBox.setAlignment(Pos.CENTER);
+        // --- INPUT SECTION ---
+        VBox inputBox = new VBox(10);
+        inputBox.setStyle("-fx-background-color: #ecf0f1; -fx-padding: 15; -fx-background-radius: 5;");
+        
+        ComboBox<String> cbbSource = new ComboBox<>();
+        cbbSource.getItems().addAll("VnExpress", "YouTube", "File CSV (Offline)");
+        cbbSource.setValue("VnExpress");
 
-        StackPane root = new StackPane(menuBox);
-        root.setPadding(new Insets(20));
+        TextField txtKw = new TextField("bão Yagi"); 
+        txtKw.setPromptText("Type keywords...");
+        txtKw.setPrefWidth(200);
 
-        mainScene = new Scene(root);
-    }
+        this.dpStart = new DatePicker(LocalDate.of(2025, 1, 1));
+        this.dpEnd = new DatePicker(LocalDate.now());
 
-    private void showChartScene(javafx.scene.Node chart) {
-        double width = stageRef.getWidth();
-        double height = stageRef.getHeight();
+        HBox row1 = new HBox(10, new Label("Source:"), cbbSource, new Label("Keywords:"), txtKw);
+        row1.setAlignment(Pos.CENTER_LEFT);
+        HBox row2 = new HBox(10, new Label("From:"), dpStart, new Label("To:"), dpEnd);
+        row2.setAlignment(Pos.CENTER_LEFT);
+        
+        inputBox.getChildren().addAll(new Label("Collector"), row1, row2);
 
-        Button btnBack = new Button("< Back");
-        btnBack.setOnAction(e -> {
-            stageRef.setScene(mainScene);
-            stageRef.setWidth(width);
-            stageRef.setHeight(height);
+        // --- BUTTONS ---
+        btnRun = new Button("▶ Start");
+        btnRun.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        btnRun.setPrefWidth(200);
+        
+        progressIndicator = new ProgressIndicator();
+        progressIndicator.setMaxSize(30, 30);
+        progressIndicator.setVisible(false);
+
+        lblStatus = new Label("Ready to start");
+        lblStatus.setStyle("-fx-text-fill: #7f8c8d;");
+
+        HBox statusBox = new HBox(10, btnRun, progressIndicator, lblStatus);
+        statusBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label lblChart = new Label("DATA ANALYSIS");
+        lblChart.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        
+        btnP1 = createChartButton("Sentiment Over Time", "PROBLEM_1");
+        btnP2 = createChartButton("Damage Category Analysis", "PROBLEM_2");
+        btnP3 = createChartButton("Satisfaction Analysis", "PROBLEM_3");
+
+        HBox chartBox = new HBox(20, btnP1, btnP2, btnP3);
+        chartBox.setAlignment(Pos.CENTER);
+
+        // Sự kiện chạy
+        btnRun.setOnAction(e -> {
+            if (dpStart.getValue().isAfter(dpEnd.getValue())) {
+                showError("Starting day can't be before the ending day"); 
+                return;
+            }
+            Date start = Date.from(dpStart.getValue().atStartOfDay(ZoneId.systemDefault()).toInstant());
+            Date end = Date.from(dpEnd.getValue().atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant());
+
+            btnRun.setDisable(true);
+            progressIndicator.setVisible(true);
+            
+            Main.processDataRequest(cbbSource.getValue(), txtKw.getText(), start, end, this);
         });
 
-        BorderPane root = new BorderPane();
-        root.setPadding(new Insets(10));
-        root.setTop(btnBack);
-        BorderPane.setMargin(btnBack, new Insets(5));
-        root.setCenter(chart);
+        VBox root = new VBox(20, header, inputBox, statusBox, new Separator(), lblChart, chartBox);
+        root.setPadding(new Insets(20));
+        root.setAlignment(Pos.TOP_CENTER);
 
-        // Cho chart giãn theo BorderPane
-        if (chart instanceof PieChart) {
-            ((PieChart) chart).setAnimated(true);
-        } else if (chart instanceof BarChart) {
-            ((BarChart<?, ?>) chart).setAnimated(true);
-            ((BarChart<?, ?>) chart).setCategoryGap(20);
-            ((BarChart<?, ?>) chart).setBarGap(5);
-        } else if (chart instanceof VBox) {
-            VBox vbox = (VBox) chart;
-            VBox.setVgrow(vbox.getChildren().get(vbox.getChildren().size()-1), Priority.ALWAYS);
+        this.dashboardScene = new Scene(root, 900, 600);
+    }
+
+    private Button createChartButton(String text, String type) {
+        Button btn = new Button(text);
+        btn.setPrefSize(200, 50);
+        btn.setDisable(true); 
+        btn.setStyle("-fx-cursor: hand;");
+        btn.setOnAction(e -> showChart(type));
+        return btn;
+    }
+
+    // Callbacks
+    public void updateStatus(String msg) { 
+        javafx.application.Platform.runLater(() -> lblStatus.setText(msg));
+    }
+
+    public void enableAnalysisButtons() {
+        javafx.application.Platform.runLater(() -> {
+            btnP1.setDisable(false);
+            btnP2.setDisable(false);
+            btnP3.setDisable(false);
+            btnRun.setDisable(false);
+            progressIndicator.setVisible(false);
+        });
+    }
+
+    // =======================================================
+    // [MODIFIED] TÁCH LOGIC ĐỂ HỖ TRỢ STRICT TYPE (GENERICS)
+    // =======================================================
+    private void showChart(String problemType) {
+        List<Post> data = Main.globalData;
+        if (data == null || data.isEmpty()) {
+            showError("No data!"); return;
         }
 
-        chartScene = new Scene(root, width, height);
-        stageRef.setScene(chartScene);
+        System.out.println("Running " + problemType + "...");
+        Node chartNode = null;
+        String title = "Analysis Result";
+
+        // Tách riêng từng case để khởi tạo đúng loại Map cụ thể
+        switch (problemType) {
+            case "PROBLEM_1":
+                // 1. Tạo Map chuyên dụng cho SentimentResult
+                Map<String, SentimentResult> res1 = new HashMap<>();
+                SentimentOverTimeAnalysis task1 = new SentimentOverTimeAnalysis();
+                
+                // 2. Chạy execute (không cần ép kiểu trong task nữa)
+                for (Post p : data) task1.execute(p, res1);
+                
+                // 3. Tạo biểu đồ
+                chartNode = createChartNode(problemType, res1);
+                title = "Sentiment Over Time";
+                break;
+
+            case "PROBLEM_2":
+                // 1. Tạo Map chuyên dụng cho B2Result
+                Map<String, B2Result> res2 = new HashMap<>();
+                DamageCategoryAnalysis task2 = new DamageCategoryAnalysis();
+                
+                for (Post p : data) task2.execute(p, res2);
+                
+                chartNode = createChartNode(problemType, res2);
+                title = "Damage Category Analysis";
+                break;
+
+            case "PROBLEM_3":
+                // 1. Tạo Map chuyên dụng cho SentimentResult (Bài 3 dùng Sentiment)
+                Map<String, SentimentResult> res3 = new HashMap<>();
+                SatisfactionAnalysis task3 = new SatisfactionAnalysis();
+                
+                for (Post p : data) task3.execute(p, res3);
+                
+                chartNode = createChartNode(problemType, res3);
+                title = "Satisfaction Analysis";
+                break;
+        }
+
+        if (chartNode != null) {
+            switchSceneToChart(chartNode, title);
+        }
+    }
+
+    // [MODIFIED] Sửa tham số thành Wildcard (? extends AnalysisResult)
+    private Node createChartNode(String problemType, Map<String, ? extends AnalysisResult> results) {
+        if (results.isEmpty()) return new StackPane(new Label("Không có dữ liệu."));
+
+        switch (problemType) {
+            case "PROBLEM_1": 
+                CategoryAxis xAxis = new CategoryAxis(); xAxis.setLabel("Time");
+                NumberAxis yAxis = new NumberAxis(); yAxis.setLabel("Count");
+                LineChart<String, Number> lineChart = new LineChart<>(xAxis, yAxis);
+                lineChart.setTitle("Xu hướng Cảm xúc (Raw Data)");
+                lineChart.setCreateSymbols(false); 
+                XYChart.Series<String, Number> pos = new XYChart.Series<>(); pos.setName("Positive");
+                XYChart.Series<String, Number> neg = new XYChart.Series<>(); neg.setName("Negative");
+                
+                // Dùng TreeMap để sắp xếp ngày tháng
+                TreeMap<String, ? extends AnalysisResult> sortedLine = new TreeMap<>(results);
+                
+                for (Map.Entry<String, ? extends AnalysisResult> entry : sortedLine.entrySet()) {
+                    if (entry.getKey() == null) continue;
+                    
+                    // Vẫn cần instanceof ở đây vì hàm này vẽ chung
+                    if (entry.getValue() instanceof SentimentResult) {
+                        SentimentResult sr = (SentimentResult) entry.getValue();
+                        pos.getData().add(new XYChart.Data<>(entry.getKey(), sr.getPositiveCount()));
+                        neg.getData().add(new XYChart.Data<>(entry.getKey(), sr.getNegativeCount()));
+                    }
+                }
+                lineChart.getData().addAll(pos, neg);
+                return lineChart;
+
+            case "PROBLEM_2":
+                PieChart pieChart = new PieChart();
+                pieChart.setTitle("Damage Type Proportion");
+                for (Map.Entry<String, ? extends AnalysisResult> entry : results.entrySet()) {
+                    if (entry.getValue() instanceof B2Result) {
+                        int count = ((B2Result) entry.getValue()).getCount();
+                        if (count > 0) pieChart.getData().add(new PieChart.Data(entry.getKey(), count));
+                    }
+                }
+                return pieChart;
+
+            case "PROBLEM_3": 
+                CategoryAxis xBar = new CategoryAxis(); xBar.setLabel("Category");
+                NumberAxis yBar = new NumberAxis(); yBar.setLabel("Satisfaction");
+                BarChart<String, Number> barChart = new BarChart<>(xBar, yBar);
+                barChart.setTitle("Thống kê Nhu cầu / Hài lòng");
+                barChart.setCategoryGap(20);
+                XYChart.Series<String, Number> sPos = new XYChart.Series<>(); sPos.setName("Postive");
+                XYChart.Series<String, Number> sNeg = new XYChart.Series<>(); sNeg.setName("Negative");
+                
+                for (Map.Entry<String, ? extends AnalysisResult> entry : results.entrySet()) {
+                    if (entry.getKey() == null) continue;
+                    int pVal = 0; int nVal = 0;
+                    
+                    if (entry.getValue() instanceof SentimentResult) {
+                        SentimentResult sr = (SentimentResult) entry.getValue();
+                        pVal = sr.getPositiveCount(); nVal = sr.getNegativeCount();
+                    } else if (entry.getValue() instanceof B2Result) {
+                        nVal = ((B2Result) entry.getValue()).getCount();
+                    }
+                    
+                    if (pVal > 0 || nVal > 0) {
+                        sPos.getData().add(new XYChart.Data<>(entry.getKey(), pVal));
+                        sNeg.getData().add(new XYChart.Data<>(entry.getKey(), nVal));
+                    }
+                }
+                barChart.getData().addAll(sPos, sNeg);
+                return barChart;
+        }
+        return null;
+    }
+
+    private void switchSceneToChart(Node chartNode, String title) {
+        BorderPane layout = new BorderPane();
+        Button btnBack = new Button("⬅ Back to Dashboard");
+        btnBack.setStyle("-fx-font-size: 14px; -fx-padding: 10; -fx-cursor: hand;");
+        btnBack.setOnAction(e -> {
+            if (dashboardScene != null) stageRef.setScene(dashboardScene);
+        });
+        
+        Label lblTitle = new Label(title);
+        lblTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        HBox topBox = new HBox(20, btnBack, lblTitle);
+        topBox.setAlignment(Pos.CENTER_LEFT);
+        topBox.setPadding(new Insets(10));
+        topBox.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-border-width: 0 0 1 0;");
+        
+        layout.setTop(topBox);
+        layout.setCenter(chartNode);
+        stageRef.setScene(new Scene(layout, 900, 600));
     }
 
     private void showError(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Lỗi");
-        alert.setHeaderText(null);
         alert.setContentText(msg);
         alert.showAndWait();
-    }
-
-    private VBox createLineChart() {
-        // ------------------------------
-        // Thu thập dữ liệu
-        // ------------------------------
-    	IDataCollector collector = null;
-        String outputPrefix = "data";
-    	ComboBox<String> sourceComboBox = new ComboBox<>();
-        sourceComboBox.getItems().addAll("ytb", "vn", "both");
-        sourceComboBox.setValue("both");
-
-        // (OPTIONAL) xử lý ngay khi đổi lựa chọn
-        sourceComboBox.setOnAction(e -> {
-            String selected = sourceComboBox.getValue();
-
-            switch (selected) {
-                case "ytb":
-                	collector = new VnExpressCollector();
-                    outputPrefix = "vnexpress";
-                    List<Post> records = collector.collect(keywords, startDate, endDate);
-                    PreProcessPipeline pipeline = new PreProcessPipeline();
-                    pipeline.addProcessor(new LowerCaseProcessor());   
-                    pipeline.addProcessor(new SpecialSymbolRemover());   
-                    pipeline.addProcessor(new VietnameseNormalizer());
-                    pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
-                    
-                    //List<Comment> allComments = new ArrayList<>();
-                    
-                    for (Post p : records) {
-                    	System.out.println("Bắt đầu tiền xử lí post " + p.getId());
-                    	pipeline.execute(p);
-                    	System.out.println("Tiền xử lí post " + p.getId() + " hoàn thành");
-                        if (!p.getComments().isEmpty()) {
-                            System.out.println("Post " + p.getId() + " có " + p.getComments().size() + " bình luận:");
-                            List<Comment> commentlist = p.getComments();
-                            for (Comment c: commentlist) {
-                            	pipeline.execute(c);
-                            	//allComments.add(c);
-                                System.out.println("   - [" + c.getId() + "] " + c.getCleanContent());
-                            }
-                        }
-                    }
-                    
-                    SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
-                    //DamageCategoryAnalysis engine = new DamageCategoryAnalysis();
-                    //SatisfactionAnalysis engine = new SatisfactionAnalysis();
-                    HashMap<String, SentimentResult> result = new HashMap<>();
-                    for (Post p: records) {
-                    	engine.execute(p,result);
-                    }
-                    break;
-                case "vn":
-                    // TODO: xử lý khi chọn VNExpress
-                    break;
-                case "both":
-                    // TODO: xử lý khi chọn cả hai
-                    break;
-            }
-        });
-        /*
-        FileCollector collector = new FileCollector();
-        List<Post> posts = collector.collect("youtubevideos.csv");
-        collector.loadComments("data.csv", posts);
-
-        PreProcessPipeline pipeline = new PreProcessPipeline();
-        pipeline.addProcessor(new LowerCaseProcessor());
-        pipeline.addProcessor(new SpecialSymbolRemover());
-
-        List<Comment> allComments = new ArrayList<>();
-        for (Post p : posts) {
-            for (Comment c : p.getComments()) {
-                pipeline.execute(c);
-                allComments.add(c);
-            }
-        }
-	*/
-        SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
-        Map<LocalDate, SentimentCount> result = engine.execute(allComments);
-
-        Map<LocalDate, SentimentCount> sortedResult =
-                result.entrySet()
-                        .stream()
-                        .sorted(Map.Entry.comparingByKey())
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                Map.Entry::getValue,
-                                (a, b) -> a,
-                                LinkedHashMap::new
-                        ));
-
-        // ------------------------------
-        // DatePicker chọn khoảng thời gian
-        // ------------------------------
-        LocalDate minDate = sortedResult.keySet().iterator().next();
-        LocalDate maxDate = sortedResult.keySet().stream().reduce((a, b) -> b).orElse(minDate);
-
-        DatePicker startPicker = new DatePicker(minDate);
-        DatePicker endPicker = new DatePicker(maxDate);
-
-        // ------------------------------
-        // LineChart
-        // ------------------------------
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis yAxis = new NumberAxis();
-        yAxis.setLabel("Số lượng comment");
-        
-        xAxis.setTickLabelsVisible(false);
-        xAxis.setTickMarkVisible(false);
-        xAxis.setOpacity(0);
-        
-        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle("Sentiment Over Time");
-        chart.setCreateSymbols(false);
-
-        // ------------------------------
-        // Button vẽ chart
-        // ------------------------------
-        Button btnDraw = new Button("Vẽ biểu đồ");
-        btnDraw.setOnAction(e -> {
-            LocalDate start = startPicker.getValue();
-            LocalDate end = endPicker.getValue();
-
-            if (start == null || end == null) {
-                showError("Vui lòng chọn đầy đủ ngày!");
-                return;
-            }
-            if (start.isAfter(end)) {
-                showError("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
-                return;
-            }
-
-            Map<LocalDate, SentimentCount> filtered = sortedResult.entrySet()
-                    .stream()
-                    .filter(x -> !x.getKey().isBefore(start) && !x.getKey().isAfter(end))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (a, b) -> a,
-                            LinkedHashMap::new
-                    ));
-
-            if (filtered.isEmpty()) {
-                showError("Không có comment trong khoảng ngày đã chọn!");
-                return;
-            }
-
-            chart.getData().clear();
-
-            XYChart.Series<String, Number> pos = new XYChart.Series<>();
-            pos.setName("Positive");
-            XYChart.Series<String, Number> neg = new XYChart.Series<>();
-            neg.setName("Negative");
-
-            int index = 1;
-            for (Map.Entry<LocalDate, SentimentCount> entry : filtered.entrySet()) {
-                SentimentCount sc = entry.getValue();
-                pos.getData().add(new XYChart.Data<>(String.valueOf(index), sc.getPositive()));
-                neg.getData().add(new XYChart.Data<>(String.valueOf(index), sc.getNegative()));
-                index++;
-            }
-
-            chart.getData().addAll(pos, neg);
-        });
-
-        VBox box = new VBox(10,
-                new Label("Chọn khoảng thời gian:"),
-                startPicker,
-                endPicker,
-                btnDraw,
-                chart
-        );
-        box.setPadding(new Insets(10));
-        VBox.setVgrow(chart, Priority.ALWAYS);
-
-        return box;
-    }
-    
-    private BarChart<String, Number> createBarChart() {
-        CategoryAxis x = new CategoryAxis();
-        NumberAxis y = new NumberAxis();
-        x.setLabel("Quý");
-        y.setLabel("Doanh thu (k)");
-
-        BarChart<String, Number> chart = new BarChart<>(x, y);
-        chart.setTitle("Bar Chart: Doanh thu theo quý");
-
-        XYChart.Series<String, Number> s = new XYChart.Series<>();
-        s.setName("2025");
-        s.getData().add(new XYChart.Data<>("Q1", 150));
-        s.getData().add(new XYChart.Data<>("Q2", 200));
-        s.getData().add(new XYChart.Data<>("Q3", 180));
-        s.getData().add(new XYChart.Data<>("Q4", 220));
-
-        chart.getData().add(s);
-        return chart;
-    }
-
-    private PieChart createPieChart() {
-        PieChart chart = new PieChart();
-        chart.setTitle("Pie Chart: Thị phần");
-        chart.getData().add(new PieChart.Data("Nhóm A", 30));
-        chart.getData().add(new PieChart.Data("Nhóm B", 25));
-        chart.getData().add(new PieChart.Data("Nhóm C", 20));
-        chart.getData().add(new PieChart.Data("Nhóm D", 25));
-        return chart;
-    }
-    public static void main(String[] args) {
-        launch(args);
     }
 }
