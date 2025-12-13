@@ -2,6 +2,7 @@ package App;
 
 import Data.*;
 import Model.*;
+import Analysis.*;
 import PreProcessor.LowerCaseProcessor;
 import PreProcessor.PreProcessPipeline;
 import PreProcessor.SpecialSymbolRemover;
@@ -101,16 +102,32 @@ public class Main {
             pipeline.addProcessor(new VietnameseNormalizer());
             pipeline.addProcessor(new StopWordsRemover("stopwords.txt"));   
             
+            //List<Comment> allComments = new ArrayList<>();
+            
             for (Post p : records) {
+            	System.out.println("Bắt đầu tiền xử lí post " + p.getId());
+            	pipeline.execute(p);
+            	System.out.println("Tiền xử lí post " + p.getId() + " hoàn thành");
                 if (!p.getComments().isEmpty()) {
                     System.out.println("Post " + p.getId() + " có " + p.getComments().size() + " bình luận:");
                     List<Comment> commentlist = p.getComments();
                     for (Comment c: commentlist) {
                     	pipeline.execute(c);
+                    	//allComments.add(c);
                         System.out.println("   - [" + c.getId() + "] " + c.getCleanContent());
                     }
                 }
             }
+            
+            SentimentOverTimeAnalysis engine = new SentimentOverTimeAnalysis();
+            //DamageCategoryAnalysis engine = new DamageCategoryAnalysis();
+            //SatisfactionAnalysis engine = new SatisfactionAnalysis();
+            HashMap<String, SentimentResult> result = new HashMap<>();
+            for (Post p: records) {
+            	engine.execute(p,result);
+            }
+            System.out.println(result);
+            
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

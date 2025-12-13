@@ -24,33 +24,34 @@ public class DamageCategoryAnalysis implements AnalysisTask<B2Result> {
     private static final List<String> DISRUPTION_PRODUCTION_WORDS = Arrays.asList(
             "mất mùa", "ao cá", "cây trồng", "thất thu", "ngừng sản xuất"
     );
-
-    // ==========================
-    // 2. Phân loại và đếm
-    // ==========================
     @Override
-    public Map<String, B2Result> execute(List<Comment> comments) {
-        Map<String, B2Result> result = new HashMap<>();
+    public void execute(Post p, HashMap<String, B2Result> result) {
+    	if (!p.getComments().isEmpty()) {
+    		List<Comment> comments  = p.getComments();
+	        for (Comment c : comments) {
+	            String category = classifyComment(c.getCleanContent());
+	
+	            // Lấy B2Result hiện tại hoặc tạo mới nếu chưa có
+	            B2Result b2 = result.getOrDefault(category, new B2Result(0));
+	
+	            // Tăng count lên 1
+	            b2.setCount(b2.getCount() + 1);
+	
+	            // Đưa lại vào map
+	            result.put(category, b2);
+	        }
+    	}
+    	String category = classifyComment(p.getCleanContent());
+    	
+        // Lấy B2Result hiện tại hoặc tạo mới nếu chưa có
+        B2Result b2 = result.getOrDefault(category, new B2Result(0));
 
-        for (Comment c : comments) {
-            String category = classifyComment(c.getCleanContent());
+        // Tăng count lên 1
+        b2.setCount(b2.getCount() + 1);
 
-            // Lấy B2Result hiện tại hoặc tạo mới nếu chưa có
-            B2Result b2 = result.getOrDefault(category, new B2Result(0));
-
-            // Tăng count lên 1
-            b2.setCount(b2.getCount() + 1);
-
-            // Đưa lại vào map
-            result.put(category, b2);
-        }
-
-        return result;
-    }
-
-    // ==========================
-    // 3. Xác định category của một comment
-    // ==========================
+        // Đưa lại vào map
+        result.put(category, b2);
+    	
     private String classifyComment(String content) {
         if (content == null || content.isEmpty()) return null;
 

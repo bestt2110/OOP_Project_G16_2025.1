@@ -22,41 +22,37 @@ public class SatisfactionAnalysis implements AnalysisTask<SentimentResult> {
     // ================================
     // 3. Hàm chính: gom Map<Type, (pos,neg)>
     // ================================
-    public Map<String, SentimentResult> execute(List<Comment> data) {
-    	Map<String, SentimentResult> result = new HashMap<>();
-        if (data == null || data.isEmpty()) return result;
-
-        for (Comment c : data) {
-            String content = c.getRawContent();
-            if (content == null || content.isEmpty()) continue;
-
-            // 1. Tìm loại cứu trợ
-            String category = classifyCategory(content);
-            if (category == null) continue;
-
-            // 2. Đếm sentiment
-            String lower = content.toLowerCase();
-            // Không có từ tích cực hay tiêu cực thì bỏ qua (neutral)
-
-            // 3. Lấy kết quả cũ hoặc tạo mới
-            SentimentResult sentiment = result.getOrDefault(category, new SentimentResult());
-            for (String w : POSITIVE_WORDS) {
-                if (lower.contains(w)) sentiment.setPositiveCount(sentiment.getPositiveCount() + 1); 
-            }
-            for (String w : NEGATIVE_WORDS) {
-                if (lower.contains(w)) sentiment.setNegativeCount(sentiment.getNegativeCount() + 1); 
-            }
-            if (sentiment.getPositiveCount() == 0 && sentiment.getNegativeCount() == 0) continue;
-            // 5. Lưu vào map
-            result.put(category, sentiment);
+    public void execute(Post p, HashMap<String, SentimentResult> result) {
+        if (!p.getComments().isEmpty()) {
+        	List<Comment> comments = p.getComments();
+        	for (Comment c : comments) {
+	            String content = c.getCleanContent();
+	            if (content == null || content.isEmpty()) continue;
+	            String category = classifyCategory(content);
+	            if (category == null) continue;
+	            SentimentResult sentiment = result.getOrDefault(category, new SentimentResult());
+	            for (String w : POSITIVE_WORDS) {
+	                if (content.contains(w)) sentiment.setPositiveCount(sentiment.getPositiveCount() + 1); 
+	            }
+	            for (String w : NEGATIVE_WORDS) {
+	                if (content.contains(w)) sentiment.setNegativeCount(sentiment.getNegativeCount() + 1); 
+	            }
+	            if (sentiment.getPositiveCount() == 0 && sentiment.getNegativeCount() == 0) continue;
+	            result.put(category, sentiment);
+	        }
         }
+        String content = p.getCleanContent();
+        String category = classifyCategory(content);
+        SentimentResult sentiment = result.getOrDefault(category, new SentimentResult());
+        for (String w : POSITIVE_WORDS) {
+            if (content.contains(w)) sentiment.setPositiveCount(sentiment.getPositiveCount() + 1); 
+        }
+        for (String w : NEGATIVE_WORDS) {
+            if (content.contains(w)) sentiment.setNegativeCount(sentiment.getNegativeCount() + 1); 
+        }
+        result.put(category, sentiment);
 
-        return result;
     }
-
-    // ================================
-    // 4. Xác định loại cứu trợ từ từ khóa
-    // ================================
     private String classifyCategory(String content) {
         String lower = content.toLowerCase();
         for (Map.Entry<String, List<String>> entry : itemKeywords.entrySet()) {

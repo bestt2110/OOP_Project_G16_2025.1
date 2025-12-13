@@ -2,6 +2,8 @@ package Analysis;
 
 import Model.*;
 import Model.AnalysisResult;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +19,7 @@ public interface AnalysisTask <T extends AnalysisResult> {
      * @return Map<String, AnalysisResult> The analysis results. The key represents the 
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
-    Map<String, T> execute(List<Comment> data);
+    void execute(Post data, HashMap<String, T> result);
     /**
      * Returns the display name of the analysis problem (used for UI or reporting).
      * @return The problem name (e.g., "Problem 1: Public Sentiment Tracking").
