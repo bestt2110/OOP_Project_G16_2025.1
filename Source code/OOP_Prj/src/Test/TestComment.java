@@ -6,6 +6,7 @@ import PreProcessor.*;
 import Data.*;
 import java.util.*;
 
+
 public class TestComment {
     public static void main(String[] args) throws ParseException {
     	List<String> keys = Arrays.asList("bão Yagi");
