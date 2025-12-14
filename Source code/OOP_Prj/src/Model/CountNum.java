@@ -1,9 +1,9 @@
 package Model;
 
-public class B2Result extends AnalysisResult {
+public class CountNum extends AnalysisResult {
     private int count;
 
-    public B2Result(int count) {
+    public CountNum(int count) {
         super();
         this.count = count;
     }
@@ -16,7 +16,6 @@ public class B2Result extends AnalysisResult {
         return count;
     }
 
-    // [THÊM MỚI] Để in ra màn hình dễ đọc hơn
     @Override
     public String toString() {
         return String.valueOf(count);

@@ -28,7 +28,6 @@ public class AnalysisResult {
      * Default constructor.
      */
     public AnalysisResult() {
-        // Initialize with default values
         this.label = "";
         this.value = 0.0;
         this.unit = "";

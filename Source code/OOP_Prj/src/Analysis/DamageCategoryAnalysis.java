@@ -3,7 +3,7 @@ package Analysis;
 import Model.*;
 import java.util.*;
 
-public class DamageCategoryAnalysis implements AnalysisTask<B2Result> {
+public class DamageCategoryAnalysis implements AnalysisTask<CountNum> {
     
     private static final List<String> AFFECTED_PEOPLE_WORDS = Arrays.asList("người bị thương", "mất tích", "cần cứu", "tử vong", "người dân gặp nạn");
     private static final List<String> DAMAGED_INFRASTRUCTURE_WORDS = Arrays.asList("cầu sập", "đứt đường", "mất điện", "cột điện", "trạm y tế", "trạm xá");
@@ -11,9 +11,8 @@ public class DamageCategoryAnalysis implements AnalysisTask<B2Result> {
     private static final List<String> LOSS_BELONGINGS_WORDS = Arrays.asList("mất tài sản", "tư trang", "mất đồ", "quần áo", "đồ đạc bị trôi");
     private static final List<String> DISRUPTION_PRODUCTION_WORDS = Arrays.asList("mất mùa", "ao cá", "cây trồng", "thất thu", "ngừng sản xuất", "chết gà", "trôi bò");
 
-    // Tham số Map<String, B2Result>
     @Override
-    public void execute(Post p, Map<String, B2Result> result) {
+    public void execute(Post p, Map<String, CountNum> result) {
         String postCategory = classifyContent(p.getCleanContent());
         updateMap(result, postCategory);
 
@@ -25,13 +24,11 @@ public class DamageCategoryAnalysis implements AnalysisTask<B2Result> {
         }
     }
     
-    // Không cần ép kiểu
-    private void updateMap(Map<String, B2Result> result, String category) {
+    private void updateMap(Map<String, CountNum> result, String category) {
         if (category == null) return;
 
-        // Lấy ra B2Result trực tiếp
-        B2Result b2 = result.getOrDefault(category, new B2Result(0));
-        b2.setCount(b2.getCount() + 1); // Gọi hàm thoải mái
+        CountNum b2 = result.getOrDefault(category, new CountNum(0));
+        b2.setCount(b2.getCount() + 1); 
         
         result.put(category, b2);
     }

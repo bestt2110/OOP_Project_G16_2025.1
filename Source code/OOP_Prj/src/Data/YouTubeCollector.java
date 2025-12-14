@@ -38,26 +38,18 @@ public class YouTubeCollector implements IDataCollector {
             String query = String.join(" ", keywords);
             System.out.println("YouTube Search Query: " + query);
             
-            // 1. Gọi hàm search video
             allPosts = searchVideos(query, 30); 
 
-            // 2. Lấy comment cho từng video (CÓ LỌC NGÀY)
             Iterator<Post> iterator = allPosts.iterator();
             while (iterator.hasNext()) {
                 Post p = iterator.next();
 
-                // Lọc video (Level 1): Nếu video đăng sai ngày -> Xóa khỏi list luôn
                 if (startDate != null && p.getTimestamp().before(startDate)) {
                     iterator.remove(); continue;
                 }
                 if (endDate != null && p.getTimestamp().after(endDate)) {
                     iterator.remove(); continue;
                 }
-                
-                
-                
-                
-                // --- [UPDATE] TRUYỀN NGÀY VÀO HÀM LẤY COMMENT ---
                 
                 List<Comment> comments = getComments(p.getId(), 50, startDate, endDate);
                 
@@ -122,9 +114,6 @@ public class YouTubeCollector implements IDataCollector {
         return videos;        
     }
 
-    /** * [UPDATE] Helper: Get comments for a video WITH DATE FILTER 
-     * Thêm tham số startDate, endDate để lọc ngay tại nguồn
-     **/
     private List<Comment> getComments(String videoId, int maxComments, Date startDate, Date endDate) throws Exception {
         try {
             YouTube.CommentThreads.List request = youtube.commentThreads()
@@ -136,7 +125,6 @@ public class YouTubeCollector implements IDataCollector {
             
             List<Comment> comments = new ArrayList<>();
             
-            // Vòng lặp lấy trang tiếp theo nếu cần
             while (comments.size() < maxComments) {
                 CommentThreadListResponse response = request.execute();
                 
@@ -145,19 +133,14 @@ public class YouTubeCollector implements IDataCollector {
                     
                     CommentSnippet snip = ct.getSnippet().getTopLevelComment().getSnippet();
                     
-                    // Lấy ngày đăng comment
                     Date cmtDate = new Date(snip.getPublishedAt().getValue());
                     
-                    // =========================================================
-                    // [QUAN TRỌNG] LỌC NGÀY COMMENT TẠI ĐÂY
-                    // =========================================================
                     if (startDate != null && cmtDate.before(startDate)) {
-                        continue; // Bỏ qua nếu comment quá cũ
+                        continue;
                     }
                     if (endDate != null && cmtDate.after(endDate)) {
-                        continue; // Bỏ qua nếu comment quá mới (so với khoảng chọn)
+                        continue;
                     }
-                    // =========================================================
 
                     String content = snip.getTextOriginal();
                     if (content == null) content = snip.getTextDisplay();
@@ -183,7 +166,6 @@ public class YouTubeCollector implements IDataCollector {
             
         } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
             if (e.getStatusCode() == 403) {
-                // Comment bị tắt
                 return Collections.emptyList();
             }
             throw e; 
