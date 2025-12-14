@@ -8,13 +8,14 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent; // [QUAN TRỌNG] Dùng Parent thay vì Scene cho View con
 import javafx.scene.Scene;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.stage.FileChooser; // [MỚI] Thư viện chọn file
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
@@ -25,8 +26,13 @@ import java.util.*;
 public class UI extends Application {
 
     private Stage stageRef;
-    private Scene homeScene;       
-    private Scene dashboardScene;  
+    
+    // [THAY ĐỔI 1] Chỉ giữ 1 Scene chính duy nhất
+    private Scene mainScene;       
+    
+    // [THAY ĐỔI 2] Lưu nội dung (View) dưới dạng Parent
+    private Parent homeView;       
+    private Parent dashboardView;  
     
     private DatePicker dpStart;
     private DatePicker dpEnd; 
@@ -36,7 +42,6 @@ public class UI extends Application {
     private Button btnRun;
     private ProgressIndicator progressIndicator;
 
-    // [MỚI] Biến lưu file người dùng chọn
     private File selectedCsvFile = null;
     private Label lblSelectedFile;
     private Button btnChooseFile;
@@ -45,13 +50,23 @@ public class UI extends Application {
     public void start(Stage primaryStage) {
         stageRef = primaryStage;
         primaryStage.setTitle("Java Project - Group 16");
-        createHomeScene();
-        createDashboardScene(); 
-        primaryStage.setScene(homeScene);
+        
+        // 1. Khởi tạo nội dung các màn hình trước
+        createHomeView();
+        createDashboardView(); 
+
+        // 2. Tạo Scene chính, mặc định hiển thị Home
+        // Kích thước 900x600 chỉ áp dụng lần đầu, sau đó theo kích thước người dùng chỉnh
+        mainScene = new Scene(homeView, 900, 600);
+        
+        primaryStage.setScene(mainScene);
         primaryStage.show();
     }
 
-    private void createHomeScene() {
+    // ==========================================
+    // 1. GIAO DIỆN TRANG CHỦ (HOME VIEW)
+    // ==========================================
+    private void createHomeView() {
         Label title = new Label("JAVA PROJECT BY GROUP 16");
         title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         Button btnAnalysis = new Button("Data Analysis");
@@ -65,19 +80,27 @@ public class UI extends Application {
                 lblStatus.setText("✅ " + Main.globalData.size() + " collected");
                 enableAnalysisButtons();
             }
-            stageRef.setScene(dashboardScene);
+            // [FIX MAXIMIZE] Thay đổi nội dung gốc của Scene, không tạo Scene mới
+            mainScene.setRoot(dashboardView);
         });
         btnExit.setOnAction(e -> System.exit(0));
 
         VBox box = new VBox(25, title, btnAnalysis, btnExit);
         box.setAlignment(Pos.CENTER);
-        homeScene = new Scene(new StackPane(box), 900, 600);
+        
+        // Gán vào biến homeView
+        this.homeView = new StackPane(box);
     }
 
-    private void createDashboardScene() {
+    // ==========================================
+    // 2. GIAO DIỆN DASHBOARD (DASHBOARD VIEW)
+    // ==========================================
+    private void createDashboardView() {
         Button btnHome = new Button("⬅ Home Screen");
         btnHome.setStyle("-fx-font-size: 14px; -fx-cursor: hand; -fx-base: #ecf0f1;");
-        btnHome.setOnAction(e -> stageRef.setScene(homeScene));
+        
+        // [FIX MAXIMIZE] Quay về Home bằng setRoot
+        btnHome.setOnAction(e -> mainScene.setRoot(homeView));
 
         Label lblTitle = new Label("DATA ANALYSIS DASHBOARD");
         lblTitle.setFont(Font.font("Arial", FontWeight.BOLD, 24));
@@ -98,29 +121,24 @@ public class UI extends Application {
         this.dpStart = new DatePicker(LocalDate.of(2025, 1, 1));
         this.dpEnd = new DatePicker(LocalDate.now());
 
-        // [MỚI] Nút chọn file và Label hiển thị tên file
         btnChooseFile = new Button("📂 Choose File...");
         lblSelectedFile = new Label("No file selected");
         lblSelectedFile.setStyle("-fx-font-style: italic; -fx-text-fill: #7f8c8d;");
         
-        // Mặc định ẩn đi (chỉ hiện khi chọn Offline)
         btnChooseFile.setVisible(false);
         lblSelectedFile.setVisible(false);
 
-        // Sự kiện: Khi chọn File CSV -> Hiện nút chọn file
         cbbSource.setOnAction(e -> {
             boolean isOffline = cbbSource.getValue().contains("File");
             btnChooseFile.setVisible(isOffline);
             lblSelectedFile.setVisible(isOffline);
-            txtKw.setDisable(isOffline); // Offline thì không cần nhập keyword
+            txtKw.setDisable(isOffline); 
         });
 
-        // Sự kiện: Bấm nút chọn file
         btnChooseFile.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Select Data File");
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-            // Mở tại thư mục hiện tại của dự án
             fileChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
             
             File file = fileChooser.showOpenDialog(stageRef);
@@ -134,7 +152,7 @@ public class UI extends Application {
         HBox row1 = new HBox(10, new Label("Source:"), cbbSource, btnChooseFile, lblSelectedFile);
         row1.setAlignment(Pos.CENTER_LEFT);
         
-        HBox row2 = new HBox(10, new Label("Keywords:"), txtKw); // Tách keyword ra dòng riêng cho thoáng
+        HBox row2 = new HBox(10, new Label("Keywords:"), txtKw);
         row2.setAlignment(Pos.CENTER_LEFT);
 
         HBox row3 = new HBox(10, new Label("From:"), dpStart, new Label("To:"), dpEnd);
@@ -157,12 +175,10 @@ public class UI extends Application {
         chartBox.setAlignment(Pos.CENTER);
 
         btnRun.setOnAction(e -> {
-            // Validate Ngày tháng
             if (dpStart.getValue().isAfter(dpEnd.getValue())) {
                 showError("Start date cannot be after End date"); return;
             }
 
-            // [MỚI] Validate Chọn file nếu đang ở chế độ Offline
             String source = cbbSource.getValue();
             String customPath = null;
             
@@ -181,19 +197,17 @@ public class UI extends Application {
             progressIndicator.setVisible(true);
             btnP1.setDisable(true); btnP2.setDisable(true); btnP3.setDisable(true);
             
-            // Truyền customPath sang Main
             Main.processDataRequest(source, txtKw.getText(), start, end, this, customPath);
         });
 
         VBox root = new VBox(20, header, inputBox, statusBox, new Separator(), new Label("RESULTS"), chartBox);
         root.setPadding(new Insets(20));
         root.setAlignment(Pos.TOP_CENTER);
-        this.dashboardScene = new Scene(root, 900, 600);
+        
+        // Gán vào biến dashboardView
+        this.dashboardView = root;
     }
 
-    // ... (Giữ nguyên các hàm notifyNoDataOrError, updateStatus, enableAnalysisButtons, showChart...)
-    
-    // --- COPY LẠI CÁC HÀM CŨ ĐỂ ĐẢM BẢO FILE CHẠY ĐƯỢC ---
     public void notifyNoDataOrError(String msg) {
         Platform.runLater(() -> {
             progressIndicator.setVisible(false);
@@ -226,6 +240,9 @@ public class UI extends Application {
         if (data == null || data.isEmpty()) { showError("No data!"); return; }
         Node chartNode = null;
         String title = "";
+        
+        // Dựa trên code bạn cung cấp, Problem 2 và 3 dùng CountNum/SentimentResult
+        // Lưu ý: Đảm bảo class CountNum/SentimentResult/DamageCategoryAnalysis của bạn khớp với Model
         switch (problemType) {
             case "PROBLEM_1":
                 Map<String, SentimentResult> res1 = new HashMap<>();
@@ -249,7 +266,7 @@ public class UI extends Application {
                 title = "Satisfaction Analysis";
                 break;
         }
-        if (chartNode != null) switchSceneToChart(chartNode, title);
+        if (chartNode != null) switchViewToChart(chartNode, title);
     }
     
     private Node createChartNode(String problemType, Map<String, ? extends AnalysisResult> results) {
@@ -306,13 +323,19 @@ public class UI extends Application {
         return null;
     }
 
-    private void switchSceneToChart(Node chartNode, String title) {
+    // [FIX MAXIMIZE] Hàm chuyển view sang biểu đồ
+    private void switchViewToChart(Node chartNode, String title) {
         BorderPane layout = new BorderPane();
         Button btnBack = new Button("⬅ Back");
-        btnBack.setOnAction(e -> stageRef.setScene(dashboardScene));
+        
+        // Quay về DashboardView bằng setRoot
+        btnBack.setOnAction(e -> mainScene.setRoot(dashboardView));
+        
         layout.setTop(new HBox(10, btnBack, new Label(title)));
         layout.setCenter(chartNode);
-        stageRef.setScene(new Scene(layout, 900, 600));
+        
+        // Set nội dung của Scene chính thành layout biểu đồ
+        mainScene.setRoot(layout);
     }
 
     private void showError(String msg) {
