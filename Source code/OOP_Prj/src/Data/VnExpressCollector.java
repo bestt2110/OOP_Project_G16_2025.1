@@ -49,7 +49,6 @@ public class VnExpressCollector implements IDataCollector {
                                            .userAgent(USER_AGENT)
                                            .timeout(30000).get();
                 
-                // Thử selector rộng hơn một chút để chắc chắn bắt được link
                 Elements articleLinks = searchPage.select(".item-news h3 a");
                 
                 System.out.println(articleLinks.size() + " found");
@@ -107,7 +106,6 @@ public class VnExpressCollector implements IDataCollector {
         try {
             Document articleDoc = Jsoup.connect(url).userAgent(USER_AGENT).timeout(10000).get();
             
-            // ... (Đoạn lấy Title/Content giữ nguyên) ...
             Element titleElement = articleDoc.selectFirst("h1.title-detail"); 
             String title = (titleElement != null) ? titleElement.text() : "N/A";
             
@@ -122,7 +120,6 @@ public class VnExpressCollector implements IDataCollector {
                  postId = url.substring(url.lastIndexOf('-') + 1, url.lastIndexOf('.'));
             } catch (Exception e) { postId = String.valueOf(url.hashCode()); }
             
-            // --- DEBUG PHẦN NGÀY THÁNG ---
             Element timeElement = articleDoc.selectFirst(".date"); 
             String rawtimeStr = (timeElement != null) ? timeElement.text().trim() : "";  
             
@@ -136,7 +133,6 @@ public class VnExpressCollector implements IDataCollector {
             } 
             
             if (finalDate == null) {
-                // IN RA LỖI ĐỂ BIẾT TẠI SAO NGÀY NULL
                 System.out.println("      -> ⚠️ WARNING: CAN'T PARSE DATE. ORIGINAL STRING WAS '" + rawtimeStr + "'");
                 return null; 
             }

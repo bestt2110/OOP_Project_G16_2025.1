@@ -23,17 +23,14 @@ public class SentimentOverTimeAnalysis implements AnalysisTask<SentimentResult> 
 
     private enum SentimentLabel { POSITIVE, NEGATIVE, NEUTRAL, UNKNOWN }
 
-    // Hàm thực thi chính - KHÔNG CẦN ÉP KIỂU
     @Override
     public void execute(Post p, Map<String, SentimentResult> result) {
-        // 1. Xử lý Post
         String pDateKey = getDateStr(p.getTimestamp());
         if (pDateKey != null) {
             SentimentLabel label = classifySentiment(p.getCleanContent());
             updateMap(result, pDateKey, label);
         }
 
-        // 2. Xử lý Comment
         if (p.getComments() != null) {
             for (Comment c : p.getComments()) {
                 String cDateKey = getDateStr(c.getTimestamp());
@@ -45,11 +42,9 @@ public class SentimentOverTimeAnalysis implements AnalysisTask<SentimentResult> 
         }
     }
 
-    // Hàm update nhận Map<String, SentimentResult> -> Lấy ra dùng luôn
     private void updateMap(Map<String, SentimentResult> result, String key, SentimentLabel label) {
         if (label == SentimentLabel.UNKNOWN || label == SentimentLabel.NEUTRAL) return;
 
-        // Tự động hiểu là SentimentResult, không cần ép kiểu
         SentimentResult sr = result.getOrDefault(key, new SentimentResult());
 
         if (label == SentimentLabel.POSITIVE) {

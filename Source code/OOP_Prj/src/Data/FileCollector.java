@@ -1,16 +1,13 @@
 package Data;
 
 import Model.Post;
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class FileCollector implements IDataCollector {
 
     private String filePath;
-    // Regex này tách dấu phẩy NHƯNG bỏ qua dấu phẩy nằm trong ngoặc kép
-    private static final String CSV_SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
     public FileCollector(String filePath) {
         this.filePath = filePath;
@@ -18,79 +15,91 @@ public class FileCollector implements IDataCollector {
 
     @Override
     public void initialize(Map<String, String> configParams) {
-        System.out.println("Reading file (No Lib): " + filePath);
+        // Không cần làm gì
     }
 
     @Override
     public List<Post> collect(List<String> keywords, Date startDate, Date endDate) {
-        List<Post> results = new ArrayList<>();
-        SimpleDateFormat csvDateFmt = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        List<Post> posts = new ArrayList<>();
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            boolean isHeader = true;
+        File file = new File(this.filePath);
+        if (!file.exists()) {
+            System.err.println("❌ Lỗi: File không tồn tại: " + this.filePath);
+            return posts;
+        }
+
+        System.out.println("-> Đang đọc file và lọc từ ngày: " + startDate + " đến " + endDate);
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+            
+            String line = br.readLine(); // Đọc header
+            if (line != null && line.startsWith("\ufeff")) line = line.substring(1);
 
             while ((line = br.readLine()) != null) {
-                if (isHeader) { isHeader = false; continue; }
-                if (line.trim().isEmpty()) continue;
-
-                // 1. Tách dòng bằng Regex
-                // -1 để giữ cả các trường rỗng ở cuối dòng
-                String[] row = line.split(CSV_SPLIT_REGEX, -1);
+                Post p = parseLineQuickly(line, fmt);
                 
-                if (row.length < 5) continue;
-
-                // 2. Làm sạch dữ liệu (Xóa ngoặc kép bao quanh, un-escape "")
-                String id = cleanCsvCell(row[0]);
-                String content = cleanCsvCell(row[1]);
-                String dateStr = cleanCsvCell(row[2]);
-                
-                int likeCount = 0;
-                int cmtCount = 0;
-                try {
-                    likeCount = Integer.parseInt(cleanCsvCell(row[3]));
-                    cmtCount = Integer.parseInt(cleanCsvCell(row[4]));
-                } catch (Exception e) {}
-
-                Date postDate = null;
-                try {
-                    postDate = csvDateFmt.parse(dateStr);
-                } catch (Exception e) {}
-
-                // --- LOGIC LỌC (FILTERING) ---
-                if (postDate != null) {
-                    if (startDate != null && postDate.before(startDate)) continue;
-                    if (endDate != null && postDate.after(endDate)) continue;
-                }
-
-                boolean match = true;
-                if (keywords != null && !keywords.isEmpty()) {
-                    match = false;
-                    for (String kw : keywords) {
-                        if (content.toLowerCase().contains(kw.toLowerCase())) {
-                            match = true;
-                            break;
+                if (p != null) {
+                    Date pDate = p.getTimestamp();
+                    
+                    // [LOGIC LỌC THỜI GIAN]
+                    if (pDate != null) {
+                        // Nếu bài viết sớm hơn ngày bắt đầu -> Bỏ qua
+                        if (startDate != null && pDate.before(startDate)) {
+                            continue; 
+                        }
+                        // Nếu bài viết muộn hơn ngày kết thúc -> Bỏ qua
+                        if (endDate != null && pDate.after(endDate)) {
+                            continue;
                         }
                     }
-                }
-
-                if (match) {
-                    results.add(new Post(id, content, postDate, likeCount, cmtCount));
+                    
+                    // Nếu ngày null hoặc thỏa mãn điều kiện thì mới thêm vào list
+                    posts.add(p);
                 }
             }
+
         } catch (Exception e) {
-            System.err.println("Lỗi đọc file: " + e.getMessage());
+            e.printStackTrace();
         }
-        return results;
+        
+        System.out.println("-> Kết quả sau lọc: " + posts.size() + " bài viết.");
+        return posts;
     }
 
-    // Hàm phụ trợ: Xóa ngoặc kép bao quanh và sửa "" thành "
-    private String cleanCsvCell(String raw) {
-        if (raw == null) return "";
-        String clean = raw.trim();
-        if (clean.startsWith("\"") && clean.endsWith("\"")) {
-            clean = clean.substring(1, clean.length() - 1);
+    private Post parseLineQuickly(String line, SimpleDateFormat fmt) {
+        try {
+            int firstSep = line.indexOf("\",\"");
+            int secondSep = line.indexOf("\",\"", firstSep + 3);
+            int lastQuote = line.lastIndexOf("\",");
+
+            if (firstSep == -1 || secondSep == -1 || lastQuote == -1) return null;
+
+            String id = line.substring(1, firstSep);
+            String dateStr = line.substring(firstSep + 3, secondSep);
+            String content = line.substring(secondSep + 3, lastQuote);
+            
+            String statsPart = line.substring(lastQuote + 2); 
+            String[] stats = statsPart.split(",");
+            
+            int likes = 0;
+            int comments = 0;
+            if (stats.length >= 2) {
+                likes = Integer.parseInt(stats[0].trim());
+                comments = Integer.parseInt(stats[1].trim());
+            }
+
+            Date date = null;
+            try {
+                if (!dateStr.equals("null") && !dateStr.isEmpty()) {
+                    date = fmt.parse(dateStr);
+                }
+            } catch (Exception e) {}
+
+            return new Post(id, content, date, likes, comments);
+
+        } catch (Exception e) {
+            return null;
         }
-        return clean.replace("\"\"", "\"");
     }
 }

@@ -3,65 +3,63 @@ package App;
 import Data.*;
 import Model.*;
 import PreProcessor.*;
-import Analysis.*;
 import UI.UI;
 import javafx.application.Application;
 import javafx.application.Platform;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Main {
     
-    // --- KHO DỮ LIỆU TẬP TRUNG ---
     public static List<Post> globalData = new ArrayList<>();
     
+    private static final SimpleDateFormat CSV_DATE_FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     public static void main(String[] args) {
         Application.launch(UI.class, args);
     }
 
-    // =========================================================
-    // HÀM XỬ LÝ LOGIC TRUNG TÂM (KHÔNG LỌC NGÀY)
-    // =========================================================
-    public static void processDataRequest(String source, String keywords, Date reqStart, Date reqEnd, UI uiController) {
+    public static void processDataRequest(String source, String keywords, Date reqStart, Date reqEnd, UI uiController, String customFilePath) {
         
         new Thread(() -> {
             try {
-                // 1. Cập nhật trạng thái
+                System.out.println("--- COLLECTING FROM: " + source + " ---");
                 Platform.runLater(() -> uiController.updateStatus("⏳ Connecting to " + source + "..."));
 
-                // 2. Chọn Collector
+                String cleanSource = source.split(" ")[0]; 
+                String dynamicFileName = cleanSource + "_posts.csv";
+
                 IDataCollector collector;
-                List<String> kwList = (keywords != null && !keywords.isEmpty()) 
+                List<String> kwList = (keywords != null && !keywords.trim().isEmpty()) 
                         ? Arrays.asList(keywords.split(",")) : new ArrayList<>();
 
                 if (source.contains("File")) {
-                    collector = new FileCollector("vnexpress_posts.csv"); 
+                    System.out.println("-> Offline mode: Read file " + customFilePath);
+                    collector = new FileCollector(customFilePath); 
                 } else if (source.contains("YouTube")) {
                     collector = new YouTubeCollector();
                 } else {
                     collector = new VnExpressCollector();
                 }
 
-                // 3. Thu thập dữ liệu
                 collector.initialize(new HashMap<>());
-                
+
                 List<Post> rawPosts = collector.collect(kwList, reqStart, reqEnd);
+                if (rawPosts == null) rawPosts = new ArrayList<>();
+                System.out.println(rawPosts.size() + " collected");
 
                 if (rawPosts.isEmpty()) {
-                    Platform.runLater(() -> {
-                        uiController.updateStatus("⚠️ No posts found.");
-                        globalData.clear();
-                    });
+                    Platform.runLater(() -> uiController.notifyNoDataOrError("⚠️ No posts found"));
                     return;
                 }
 
-                Platform.runLater(() -> uiController.updateStatus("🧹 Cleaning " + rawPosts.size() + " posts..."));
-
-                // 4. Tiền xử lý (Pipeline) - Làm sạch text
+                Platform.runLater(() -> uiController.updateStatus("🧹 Cleaning data..."));
                 PreProcessPipeline pipeline = new PreProcessPipeline();
                 pipeline.addProcessor(new LowerCaseProcessor());
                 pipeline.addProcessor(new SpecialSymbolRemover());
-                // pipeline.addProcessor(new VietnameseNormalizer());
 
                 for (Post p : rawPosts) {
                     pipeline.execute(p);
@@ -70,19 +68,41 @@ public class Main {
                     }
                 }
 
-                // 5. Cập nhật vào Kho dữ liệu chung (RAW)
                 globalData = rawPosts;
 
-                // 6. Báo cáo hoàn tất
+                // Lưu file nếu là chế độ Online
+                if (!source.contains("File")) { 
+                    saveToCSV(globalData, dynamicFileName);
+                }
+
                 Platform.runLater(() -> {
-                    uiController.updateStatus("✅ Done " + globalData.size() + " collected");
+                    String msg = "✅ " + globalData.size() + " posts collected";
+                    if (!source.contains("File")) msg += " Saved into: " + dynamicFileName;
+                    uiController.updateStatus(msg);
                     uiController.enableAnalysisButtons(); 
                 });
 
-            } catch (Exception e) {
+            } catch (Throwable e) { 
                 e.printStackTrace();
-                Platform.runLater(() -> uiController.updateStatus("❌ Lỗi: " + e.getMessage()));
+                Platform.runLater(() -> uiController.notifyNoDataOrError("❌ ERROR: " + e.toString()));
             }
         }).start();
+    }
+
+    private static void saveToCSV(List<Post> posts, String filename) {
+        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(filename), StandardCharsets.UTF_8))) {
+            writer.write('\ufeff'); 
+            writer.println("ID,Date,Content,Likes,Comments");
+
+            for (Post p : posts) {
+                String cleanContent = p.getRawContent() != null ? p.getRawContent() : "";
+                cleanContent = cleanContent.replace("\"", "\"\"").replace("\n", " ").replace("\r", " ").replace(",", ";");
+                String dateStr = (p.getTimestamp() != null) ? CSV_DATE_FMT.format(p.getTimestamp()) : "";
+                writer.printf("\"%s\",\"%s\",\"%s\",%d,%d%n", p.getId(), dateStr, cleanContent, p.getLikeCount(), p.getCmt());
+            }
+            System.out.println("-> [SAVED]: " + filename);
+        } catch (IOException e) {
+            System.err.println("-> Saving error: " + e.getMessage());
+        }
     }
 }

@@ -21,9 +21,4 @@ public interface AnalysisTask <T extends AnalysisResult> {
      * grouping category (e.g., "POSITIVE", "Flood"), and the value is the AnalysisResult object.
      */
     void execute(Post data, Map<String, T> result);
-    /**
-     * Returns the display name of the analysis problem (used for UI or reporting).
-     * @return The problem name (e.g., "Problem 1: Public Sentiment Tracking").
-     */
-    //String getProblemName();
 }

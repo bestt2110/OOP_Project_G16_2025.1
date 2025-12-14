@@ -10,15 +10,12 @@ public class CSVWriterUtil {
 
     public static void writeCsv(String filename, List<String[]> rows) {
         try {
-            // 1. Tạo luồng ghi file
             FileOutputStream fos = new FileOutputStream(filename);
             
-            // 2. Ghi BOM (Byte Order Mark) để Excel nhận diện Tiếng Việt UTF-8
             fos.write(0xEF);
             fos.write(0xBB);
             fos.write(0xBF);
 
-            // 3. Khởi tạo OpenCSV Writer
             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
             
             try (CSVWriter writer = new CSVWriter(osw)) {

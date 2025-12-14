@@ -13,7 +13,6 @@ public class SatisfactionAnalysis implements AnalysisTask<SentimentResult> {
         itemKeywords = loadItemKeywords();
     }
 
-    // Tham số Map<String, SentimentResult>
     @Override
     public void execute(Post p, Map<String, SentimentResult> result) {
         processText(p.getCleanContent(), result);
@@ -28,7 +27,6 @@ public class SatisfactionAnalysis implements AnalysisTask<SentimentResult> {
         String category = classifyCategory(content);
         if (category == null) return; 
 
-        // Lấy ra SentimentResult trực tiếp
         SentimentResult sentiment = result.getOrDefault(category, new SentimentResult());
 
         int posFound = 0;
