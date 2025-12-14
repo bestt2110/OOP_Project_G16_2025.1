@@ -57,7 +57,7 @@ public class UI extends Application {
 
         // 2. Tạo Scene chính, mặc định hiển thị Home
         // Kích thước 900x600 chỉ áp dụng lần đầu, sau đó theo kích thước người dùng chỉnh
-        mainScene = new Scene(homeView, 900, 600);
+        mainScene = new Scene(homeView, 1200, 900);
         
         primaryStage.setScene(mainScene);
         primaryStage.show();
@@ -68,10 +68,10 @@ public class UI extends Application {
     // ==========================================
     private void createHomeView() {
         Label title = new Label("JAVA PROJECT BY GROUP 16");
-        title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        title.setStyle("-fx-font-size: 60px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         Button btnAnalysis = new Button("Data Analysis");
         Button btnExit = new Button("Exit");
-        String btnStyle = "-fx-font-size: 16px; -fx-pref-width: 250px; -fx-pref-height: 40px; -fx-cursor: hand;";
+        String btnStyle = "-fx-font-size: 16px; -fx-pref-width: 500px; -fx-pref-height: 80px; -fx-cursor: hand;";
         btnAnalysis.setStyle(btnStyle);
         btnExit.setStyle(btnStyle);
 
