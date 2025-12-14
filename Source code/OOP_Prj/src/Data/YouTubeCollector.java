@@ -15,7 +15,7 @@ public class YouTubeCollector implements IDataCollector {
     
     private final YouTube youtube;
     private final String apiKey;
-    private static final String YOUTUBE_API_KEY = "AIzaSyAKBxo0ajeIiRFVFtyJcGX9rQCdz1Sst7E"; 
+    private static final String YOUTUBE_API_KEY = "AIzaSyA1KCwPZS7KEtCm7Q1_60T-xHqNT9x9v5E"; 
 
     public YouTubeCollector() throws Exception {
         youtube = new YouTube.Builder(
